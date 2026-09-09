@@ -17,11 +17,16 @@
     "incremental": true,
     "skipLibCheck": true,
     "strict": true,
+    // Off because request DTOs declare their fields without initialisers —
+    // `class-validator` and `class-transformer` populate them from the request
+    // body at runtime, so an initialiser would be dead code and `!` on every
+    // field would be noise. Validation, not the type system, is what guarantees
+    // those fields are present. Every other strict check stays on.
     "strictPropertyInitialization": false,
     "noUnusedLocals": true,
     "noUnusedParameters": true,
     "noImplicitReturns": true,
     "forceConsistentCasingInFileNames": true
   },
-  "include": ["src/**/*.ts", "scripts/**/*.ts"]
+  "include": ["src/**/*.ts", "scripts/**/*.ts", "prisma/**/*.ts", "test/**/*.ts"]
 }

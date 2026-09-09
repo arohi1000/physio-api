@@ -32,6 +32,265 @@
           "health"
         ]
       }
+    },
+    "/api/v1/auth/google": {
+      "post": {
+        "description": "The email must already exist in `users` and be active. Users are never created just in time.",
+        "operationId": "AuthController_signInWithGoogle",
+        "parameters": [],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/GoogleSignInDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AuthSessionDto"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Authentication failed"
+          }
+        },
+        "summary": "Exchange a Google ID token for a CRM session",
+        "tags": [
+          "auth"
+        ]
+      }
+    },
+    "/api/v1/auth/login": {
+      "post": {
+        "description": "Kept so a lost Google account cannot lock the practice out of its own CRM.",
+        "operationId": "AuthController_signInWithPassword",
+        "parameters": [],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/PasswordLoginDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AuthSessionDto"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Authentication failed"
+          }
+        },
+        "summary": "Break-glass password sign-in",
+        "tags": [
+          "auth"
+        ]
+      }
+    },
+    "/api/v1/auth/refresh": {
+      "post": {
+        "description": "Presenting an already-rotated token revokes every token in its family.",
+        "operationId": "AuthController_refresh",
+        "parameters": [],
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AuthSessionDto"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Authentication failed"
+          }
+        },
+        "summary": "Rotate the refresh cookie and issue a new access token",
+        "tags": [
+          "auth"
+        ]
+      }
+    },
+    "/api/v1/auth/logout": {
+      "post": {
+        "operationId": "AuthController_logout",
+        "parameters": [],
+        "responses": {
+          "204": {
+            "description": "Session ended"
+          }
+        },
+        "summary": "Revoke the current refresh-token family",
+        "tags": [
+          "auth"
+        ]
+      }
+    },
+    "/api/v1/auth/me": {
+      "get": {
+        "operationId": "AuthController_describeCurrentUser",
+        "parameters": [],
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AuthUserDto"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Authentication failed"
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "The signed-in CRM user",
+        "tags": [
+          "auth"
+        ]
+      }
+    },
+    "/api/v1/auth/dev-login": {
+      "post": {
+        "description": "Skips identity verification only. The email must still exist in `users` and be active.",
+        "operationId": "DevAuthController_devLogin",
+        "parameters": [],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/DevLoginDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AuthSessionDto"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Authentication failed"
+          }
+        },
+        "summary": "[DEV ONLY] Issue a session without proving identity",
+        "tags": [
+          "auth"
+        ]
+      }
+    },
+    "/api/v1/admin/audit-logs": {
+      "get": {
+        "operationId": "AuditLogsController_list",
+        "parameters": [
+          {
+            "name": "userId",
+            "required": false,
+            "in": "query",
+            "description": "Filter by acting user.",
+            "schema": {
+              "format": "uuid",
+              "type": "string"
+            }
+          },
+          {
+            "name": "action",
+            "required": false,
+            "in": "query",
+            "schema": {
+              "example": "patient.delete",
+              "type": "string"
+            }
+          },
+          {
+            "name": "entityType",
+            "required": false,
+            "in": "query",
+            "schema": {
+              "example": "appointment",
+              "type": "string"
+            }
+          },
+          {
+            "name": "page",
+            "required": false,
+            "in": "query",
+            "schema": {
+              "minimum": 1,
+              "default": 1,
+              "type": "number"
+            }
+          },
+          {
+            "name": "pageSize",
+            "required": false,
+            "in": "query",
+            "schema": {
+              "minimum": 1,
+              "maximum": 200,
+              "default": 50,
+              "type": "number"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AuditLogPageDto"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Requires the doctor_admin role"
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "List audit log entries, newest first",
+        "tags": [
+          "admin"
+        ]
+      }
     }
   },
   "info": {
@@ -43,6 +302,14 @@
   "tags": [],
   "servers": [],
   "components": {
+    "securitySchemes": {
+      "bearer": {
+        "scheme": "bearer",
+        "bearerFormat": "JWT",
+        "type": "http",
+        "description": "CRM access token from POST /auth/google or /auth/login."
+      }
+    },
     "schemas": {
       "DependencyHealthDto": {
         "type": "object",
@@ -97,6 +364,200 @@
         "required": [
           "status",
           "dependencies"
+        ]
+      },
+      "GoogleSignInDto": {
+        "type": "object",
+        "properties": {
+          "idToken": {
+            "type": "string",
+            "description": "Google ID token obtained by the CRM."
+          }
+        },
+        "required": [
+          "idToken"
+        ]
+      },
+      "UserRole": {
+        "type": "string",
+        "enum": [
+          "doctor_admin",
+          "staff"
+        ]
+      },
+      "AuthUserDto": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "name": {
+            "type": "string"
+          },
+          "email": {
+            "type": "string",
+            "format": "email"
+          },
+          "role": {
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/UserRole"
+              }
+            ]
+          }
+        },
+        "required": [
+          "id",
+          "name",
+          "email",
+          "role"
+        ]
+      },
+      "AuthSessionDto": {
+        "type": "object",
+        "properties": {
+          "accessToken": {
+            "type": "string",
+            "description": "Bearer token for the Authorization header."
+          },
+          "expiresIn": {
+            "type": "number",
+            "description": "Access-token lifetime in seconds."
+          },
+          "user": {
+            "$ref": "#/components/schemas/AuthUserDto"
+          }
+        },
+        "required": [
+          "accessToken",
+          "expiresIn",
+          "user"
+        ]
+      },
+      "PasswordLoginDto": {
+        "type": "object",
+        "properties": {
+          "email": {
+            "type": "string",
+            "format": "email"
+          },
+          "password": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "email",
+          "password"
+        ]
+      },
+      "DevLoginDto": {
+        "type": "object",
+        "properties": {
+          "email": {
+            "type": "string",
+            "format": "email",
+            "description": "Must already exist in `users` and be active — the allow-list applies exactly as it does to Google sign-in."
+          }
+        },
+        "required": [
+          "email"
+        ]
+      },
+      "AuditLogActorDto": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "name": {
+            "type": "string"
+          },
+          "email": {
+            "type": "string",
+            "format": "email"
+          }
+        },
+        "required": [
+          "id",
+          "name",
+          "email"
+        ]
+      },
+      "AuditLogEntryDto": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "actor": {
+            "$ref": "#/components/schemas/AuditLogActorDto"
+          },
+          "action": {
+            "type": "string",
+            "example": "patient.delete"
+          },
+          "entityType": {
+            "type": "string",
+            "example": "patient"
+          },
+          "entityId": {
+            "type": "object",
+            "format": "uuid",
+            "nullable": true
+          },
+          "metadata": {
+            "type": "object",
+            "nullable": true,
+            "description": "Before/after diff, when the handler recorded one.",
+            "additionalProperties": true
+          },
+          "ipAddress": {
+            "type": "object",
+            "nullable": true
+          },
+          "createdAt": {
+            "type": "string",
+            "format": "date-time"
+          }
+        },
+        "required": [
+          "id",
+          "actor",
+          "action",
+          "entityType",
+          "entityId",
+          "metadata",
+          "ipAddress",
+          "createdAt"
+        ]
+      },
+      "AuditLogPageDto": {
+        "type": "object",
+        "properties": {
+          "items": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/AuditLogEntryDto"
+            }
+          },
+          "total": {
+            "type": "number"
+          },
+          "page": {
+            "type": "number"
+          },
+          "pageSize": {
+            "type": "number"
+          }
+        },
+        "required": [
+          "items",
+          "total",
+          "page",
+          "pageSize"
         ]
       }
     }

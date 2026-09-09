@@ -84,18 +84,42 @@ when the dependency returns.
 
 ---
 
-## Database migrations
-
-The Prisma schema currently declares a datasource and generator only — the
-domain model arrives in Milestone 1, so there are no migrations to apply yet.
+## Database migrations and seed
 
 ```bash
 npm run prisma:generate   # regenerate the client after a schema change
 npm run prisma:migrate    # create and apply a migration in development
+npm run prisma:deploy     # apply existing migrations (CI, staging, production)
+npm run db:seed           # populate a demoable dataset — safe to re-run
 ```
 
-`prisma:migrate` reads `DATABASE_URL` from `.env`, so the containers from
+These read `DATABASE_URL` from `.env`, so the containers from
 `docker compose up -d` must be running.
+
+The seed is idempotent: every record is matched on a natural key and updated
+rather than inserted, so running it twice leaves the same row count. It creates
+a `doctor_admin` and a `staff` account, the treatment catalogue, the weekly
+working-hours template, message templates, reviews and blog posts.
+
+### The partial unique index
+
+`appointments (scheduled_at) WHERE status = 'booked'` cannot be expressed in the
+Prisma schema DSL, so it lives in a hand-written migration
+(`*_appointment_booked_slot_unique`). Prisma does not treat it as drift, so
+`prisma migrate dev` will not try to drop it — but check
+`prisma migrate diff` output before committing a migration that touches
+`appointments`.
+
+### Integration tests
+
+They run against a dedicated database and a separate Redis logical database, so
+they never disturb development data:
+
+```bash
+docker exec physio-postgres psql -U physio -d postgres -c 'CREATE DATABASE physio_test OWNER physio;'
+DATABASE_URL=postgresql://physio:physio@localhost:5433/physio_test npx prisma migrate deploy
+npm run test:e2e
+```
 
 ---
 
@@ -108,12 +132,14 @@ npm run prisma:migrate    # create and apply a migration in development
 | `npm run build` | Compile TypeScript to `dist/`. |
 | `npm run start:prod` | Run the compiled build (`npm run build` first). |
 | `npm test` | Run the unit test suite. No database required. |
+| `npm run test:e2e` | Run the integration suite against Postgres and Redis. |
 | `npm run test:watch` | Run unit tests in watch mode. |
 | `npm run test:cov` | Run unit tests with a coverage report. |
 | `npm run lint` | ESLint + Prettier check. Fails on any problem. |
 | `npm run lint:fix` | Same, applying every fix it can. |
 | `npm run typecheck` | `tsc --noEmit` against the strict config. |
 | `npm run generate:openapi` | Regenerate `openapi.json`. |
+| `npm run db:seed` | Seed a demoable dataset. Idempotent. |
 
 ### Docker
 
@@ -164,6 +190,25 @@ at the first request.
 `CORS_ALLOWED_ORIGINS` is a comma-separated allow-list of browser origins (the
 public website and the CRM). An origin that is not listed receives no
 `Access-Control-Allow-Origin` header and is blocked by the browser.
+
+### `AUTH_DEV_BYPASS` — temporary, and dangerous
+
+`POST /api/v1/auth/dev-login` issues a real session for any active user in
+`users` without proving identity. It stands in for Google sign-in until a Google
+Cloud OAuth client exists, and **must be removed before any deployment**.
+
+It is fenced in three places:
+
+- the route is registered only when `AUTH_DEV_BYPASS=true` **and**
+  `NODE_ENV !== 'production'`, so with the flag off it does not exist and does
+  not appear in `openapi.json`;
+- the application **throws at startup** if the flag is set while
+  `NODE_ENV=production`;
+- a warning is logged at startup whenever it is active.
+
+It bypasses identity proof and nothing else. The `users` allow-list and the
+`active` check apply exactly as they do to Google sign-in — an unknown or
+deactivated email is refused.
 
 ---
 

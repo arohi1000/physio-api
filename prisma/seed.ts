@@ -1,0 +1,351 @@
+import {
+  MessageType,
+  PrismaClient,
+  UserRole,
+  type Prisma,
+} from '@prisma/client';
+import * as argon2 from 'argon2';
+import { config } from 'dotenv';
+import type { WeeklyWorkingHours } from '../src/modules/clinic-settings/clinic-settings.types';
+
+config({ quiet: true });
+
+const prisma = new PrismaClient();
+
+/**
+ * Local development defaults. The CRM demo signs in as either of these through
+ * the dev bypass; the doctor additionally has a break-glass password.
+ */
+const DOCTOR_EMAIL = (
+  process.env.SEED_DOCTOR_EMAIL ?? 'doctor@physioclinic.local'
+).toLowerCase();
+const DOCTOR_PASSWORD = process.env.SEED_DOCTOR_PASSWORD ?? 'ChangeMe!Local123';
+const STAFF_EMAIL = (
+  process.env.SEED_STAFF_EMAIL ?? 'staff@physioclinic.local'
+).toLowerCase();
+
+/** Mon–Sat morning and evening clinics; Sunday closed. Times are Asia/Kolkata. */
+const WEEKLY_WORKING_HOURS: WeeklyWorkingHours = {
+  monday: [
+    { start: '09:00', end: '13:00' },
+    { start: '17:00', end: '20:00' },
+  ],
+  tuesday: [
+    { start: '09:00', end: '13:00' },
+    { start: '17:00', end: '20:00' },
+  ],
+  wednesday: [
+    { start: '09:00', end: '13:00' },
+    { start: '17:00', end: '20:00' },
+  ],
+  thursday: [
+    { start: '09:00', end: '13:00' },
+    { start: '17:00', end: '20:00' },
+  ],
+  friday: [
+    { start: '09:00', end: '13:00' },
+    { start: '17:00', end: '20:00' },
+  ],
+  saturday: [{ start: '09:00', end: '14:00' }],
+  sunday: [],
+};
+
+const SERVICES = [
+  {
+    name: 'Initial Physiotherapy Assessment',
+    description:
+      'A full first consultation: history, movement screen, hands-on assessment and a written treatment plan.',
+    price: '1200.00',
+    durationMinutes: 45,
+    demoVideoUrl: 'https://www.youtube.com/watch?v=placeholder-assessment',
+  },
+  {
+    name: 'Sports Injury Rehabilitation',
+    description:
+      'Progressive loading and return-to-sport work for muscle, tendon and ligament injuries.',
+    price: '1500.00',
+    durationMinutes: 60,
+    demoVideoUrl: 'https://www.youtube.com/watch?v=placeholder-sports',
+  },
+  {
+    name: 'Post-Surgical Rehabilitation',
+    description:
+      'Structured recovery after knee, hip, shoulder or spinal surgery, coordinated with your surgeon’s protocol.',
+    price: '1500.00',
+    durationMinutes: 60,
+    demoVideoUrl: null,
+  },
+  {
+    name: 'Manual Therapy Session',
+    description:
+      'Hands-on mobilisation and soft-tissue work for stiffness and mechanical pain.',
+    price: '1000.00',
+    durationMinutes: 45,
+    demoVideoUrl: null,
+  },
+  {
+    name: 'Dry Needling',
+    description:
+      'Targeted trigger-point needling for persistent muscular tightness, as an adjunct to exercise therapy.',
+    price: '900.00',
+    durationMinutes: 30,
+    demoVideoUrl: null,
+  },
+  {
+    name: 'Posture & Ergonomic Consultation',
+    description:
+      'Desk-setup review and a corrective exercise programme for neck, upper-back and wrist strain.',
+    price: '800.00',
+    durationMinutes: 30,
+    demoVideoUrl: null,
+  },
+] as const;
+
+const MESSAGE_TEMPLATES = [
+  {
+    type: MessageType.cancellation,
+    label: 'Polite reschedule',
+    bodyTemplate:
+      'Hello {{patient_name}}, we are very sorry but Dr. Sharma has had to cancel your appointment. {{doctor_note}} Please pick a new time here: {{rebooking_link}}',
+  },
+  {
+    type: MessageType.cancellation,
+    label: 'Clinic emergency',
+    bodyTemplate:
+      'Hello {{patient_name}}, due to an emergency at the clinic your appointment cannot go ahead. {{doctor_note}} We have kept your slot preference — rebook here: {{rebooking_link}}',
+  },
+  {
+    type: MessageType.cancellation,
+    label: 'Doctor unwell',
+    bodyTemplate:
+      'Hello {{patient_name}}, Dr. Sharma is unwell today and we must reschedule your session. {{doctor_note}} Our apologies for the short notice. Rebook: {{rebooking_link}}',
+  },
+  {
+    type: MessageType.followup_reminder,
+    label: 'Gentle revisit nudge',
+    bodyTemplate:
+      'Hello {{patient_name}}, your next physiotherapy review is due around {{revisit_date}}. Book a time that suits you: {{rebooking_link}}',
+  },
+  {
+    type: MessageType.followup_reminder,
+    label: 'Progress check-in',
+    bodyTemplate:
+      'Hello {{patient_name}}, it has been a few weeks since your last session. {{doctor_note}} Shall we review your progress around {{revisit_date}}? {{rebooking_link}}',
+  },
+  {
+    type: MessageType.followup_reminder,
+    label: 'Programme completion',
+    bodyTemplate:
+      'Hello {{patient_name}}, you are near the end of your programme. A final review around {{revisit_date}} will let us confirm your recovery. {{rebooking_link}}',
+  },
+  {
+    type: MessageType.booking_confirmation,
+    label: 'Standard confirmation',
+    bodyTemplate:
+      'Hello {{patient_name}}, your appointment is confirmed. Please arrive five minutes early and wear comfortable clothing. Need to change it? {{rebooking_link}}',
+  },
+  {
+    type: MessageType.booking_confirmation,
+    label: 'First visit',
+    bodyTemplate:
+      'Hello {{patient_name}}, your first appointment is confirmed. Please bring any scans, reports or referral letters you have. Change your time: {{rebooking_link}}',
+  },
+  {
+    type: MessageType.booking_confirmation,
+    label: 'With preparation note',
+    bodyTemplate:
+      'Hello {{patient_name}}, your appointment is confirmed. {{doctor_note}} If anything changes you can rebook here: {{rebooking_link}}',
+  },
+] as const;
+
+const REVIEWS = [
+  {
+    patientName: 'Ananya Iyer',
+    rating: 5,
+    comment:
+      'Six weeks after my ACL surgery I was walking without a limp. The exercises were explained clearly and adjusted every single visit.',
+  },
+  {
+    patientName: 'Rohit Menon',
+    rating: 5,
+    comment:
+      'Years of desk-job neck pain sorted in four sessions, plus a workstation setup I actually understood how to maintain.',
+  },
+  {
+    patientName: 'Sunita Deshpande',
+    rating: 4,
+    comment:
+      'Very thorough assessment and no unnecessary appointments pushed on me. Booking on WhatsApp was easy.',
+  },
+  {
+    patientName: 'Karthik Raman',
+    rating: 5,
+    comment:
+      'Came in with a running injury three weeks before a half marathon. Finished the race pain-free.',
+  },
+] as const;
+
+const BLOG_POSTS = [
+  {
+    title: 'Five desk stretches that actually help neck pain',
+    slug: 'five-desk-stretches-for-neck-pain',
+    content:
+      '## Why your neck hurts at a desk\n\nSustained postures load the deep neck flexors far more than movement does. These five stretches, done hourly, break that load up.\n\n1. Chin tucks\n2. Upper trapezius stretch\n3. Thoracic extension over the chair back\n4. Scapular retraction holds\n5. Levator scapulae stretch\n',
+    published: true,
+  },
+  {
+    title: 'What to expect from your first physiotherapy visit',
+    slug: 'what-to-expect-first-physiotherapy-visit',
+    content:
+      '## Before you arrive\n\nBring any scans, reports or referral letters, and wear clothing you can move in.\n\n## During the session\n\nWe take a history, screen your movement, assess hands-on, and leave you with a written plan and two or three exercises — not twenty.\n',
+    published: true,
+  },
+  {
+    title: 'Returning to running after a knee injury',
+    slug: 'returning-to-running-after-knee-injury',
+    content:
+      '## Load, not rest\n\nTendons and cartilage adapt to graded load. Complete rest deconditions them.\n\n## A sensible progression\n\nWalk-run intervals, then continuous easy running, then pace — changing only one variable at a time.\n',
+    published: false,
+  },
+] as const;
+
+async function seedUsers(): Promise<{ doctorId: string }> {
+  const doctor = await prisma.user.upsert({
+    where: { email: DOCTOR_EMAIL },
+    update: {
+      name: 'Dr. Meera Sharma',
+      role: UserRole.doctor_admin,
+      active: true,
+    },
+    create: {
+      name: 'Dr. Meera Sharma',
+      email: DOCTOR_EMAIL,
+      role: UserRole.doctor_admin,
+      active: true,
+      passwordHash: await argon2.hash(DOCTOR_PASSWORD, {
+        type: argon2.argon2id,
+      }),
+    },
+  });
+
+  await prisma.user.upsert({
+    where: { email: STAFF_EMAIL },
+    update: { name: 'Priya Nair', role: UserRole.staff, active: true },
+    create: {
+      name: 'Priya Nair',
+      email: STAFF_EMAIL,
+      role: UserRole.staff,
+      active: true,
+    },
+  });
+
+  return { doctorId: doctor.id };
+}
+
+async function seedClinicSettings(): Promise<void> {
+  const workingHours: Prisma.InputJsonValue = WEEKLY_WORKING_HOURS;
+  const existing = await prisma.clinicSettings.findFirst();
+
+  if (existing) {
+    await prisma.clinicSettings.update({
+      where: { id: existing.id },
+      data: { workingHours },
+    });
+    return;
+  }
+
+  await prisma.clinicSettings.create({
+    data: { workingHours, timezone: 'Asia/Kolkata' },
+  });
+}
+
+async function seedServices(): Promise<void> {
+  for (const service of SERVICES) {
+    const existing = await prisma.service.findFirst({
+      where: { name: service.name },
+    });
+
+    if (existing) {
+      await prisma.service.update({
+        where: { id: existing.id },
+        data: { ...service, active: true },
+      });
+    } else {
+      await prisma.service.create({ data: { ...service, active: true } });
+    }
+  }
+}
+
+async function seedMessageTemplates(): Promise<void> {
+  for (const template of MESSAGE_TEMPLATES) {
+    await prisma.messageTemplate.upsert({
+      where: { type_label: { type: template.type, label: template.label } },
+      update: { bodyTemplate: template.bodyTemplate, active: true },
+      create: { ...template, active: true },
+    });
+  }
+}
+
+async function seedReviews(): Promise<void> {
+  for (const review of REVIEWS) {
+    const existing = await prisma.review.findFirst({
+      where: { patientName: review.patientName, comment: review.comment },
+    });
+
+    if (!existing) {
+      await prisma.review.create({ data: { ...review, active: true } });
+    }
+  }
+}
+
+async function seedBlogPosts(authorUserId: string): Promise<void> {
+  for (const post of BLOG_POSTS) {
+    await prisma.blogPost.upsert({
+      where: { slug: post.slug },
+      update: {
+        title: post.title,
+        content: post.content,
+        published: post.published,
+      },
+      create: {
+        ...post,
+        authorUserId,
+        publishedAt: post.published ? new Date() : null,
+      },
+    });
+  }
+}
+
+/**
+ * Idempotent by design: every record is matched on a natural key and updated
+ * rather than inserted, so running the seed twice leaves the same row count.
+ */
+async function main(): Promise<void> {
+  const { doctorId } = await seedUsers();
+  await seedClinicSettings();
+  await seedServices();
+  await seedMessageTemplates();
+  await seedReviews();
+  await seedBlogPosts(doctorId);
+
+  const counts = {
+    users: await prisma.user.count(),
+    services: await prisma.service.count(),
+    clinicSettings: await prisma.clinicSettings.count(),
+    messageTemplates: await prisma.messageTemplate.count(),
+    reviews: await prisma.review.count(),
+    blogPosts: await prisma.blogPost.count(),
+  };
+
+  process.stdout.write(`Seed complete: ${JSON.stringify(counts)}\n`);
+  process.stdout.write(
+    `Sign in as ${DOCTOR_EMAIL} (doctor_admin) or ${STAFF_EMAIL} (staff).\n`,
+  );
+}
+
+main()
+  .catch((error: unknown) => {
+    process.exitCode = 1;
+    process.stderr.write(`Seed failed: ${String(error)}\n`);
+  })
+  .finally(() => prisma.$disconnect());

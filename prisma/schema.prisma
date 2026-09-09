@@ -1,6 +1,12 @@
-// Physio Clinic API — Prisma schema.
-// Milestone 0 establishes the datasource and generator only; the domain model
-// (TRD §4) lands in Milestone 1.
+// Physio Clinic API — Prisma schema (TRD §4).
+//
+// Naming: models are PascalCase in Prisma and snake_case in PostgreSQL via
+// @@map/@map, so generated TypeScript reads idiomatically while the database
+// follows the convention in EXECUTION-PLAN §4.5.
+//
+// Soft delete: `deletedAt` on Patient, Appointment, Receipt and Prescription is
+// filtered out of every default query by the client extension in
+// src/modules/prisma/soft-delete.extension.ts.
 
 generator client {
   provider = "prisma-client-js"
@@ -9,4 +15,413 @@ generator client {
 datasource db {
   provider = "postgresql"
   url      = env("DATABASE_URL")
+}
+
+enum UserRole {
+  doctor_admin
+  staff
+
+  @@map("user_role")
+}
+
+enum PatientSource {
+  website
+  manual
+
+  @@map("patient_source")
+}
+
+enum AppointmentStatus {
+  booked
+  completed
+  cancelled
+  no_show
+
+  @@map("appointment_status")
+}
+
+enum BookingSource {
+  website
+  manual
+  followup_link
+
+  @@map("booking_source")
+}
+
+enum PaymentStatus {
+  pending
+  paid_online
+  paid_offline
+  refunded
+
+  @@map("payment_status")
+}
+
+enum FollowUpStatus {
+  scheduled
+  reminder_sent
+  rebooked
+  dismissed
+
+  @@map("follow_up_status")
+}
+
+enum CouponValueType {
+  percent
+  fixed
+
+  @@map("coupon_value_type")
+}
+
+enum MessageType {
+  cancellation
+  followup_reminder
+  booking_confirmation
+
+  @@map("message_type")
+}
+
+enum MessageStatus {
+  pending
+  sent
+  failed
+  delivered
+  read
+
+  @@map("message_status")
+}
+
+enum PaymentMethod {
+  cash
+  online
+  card
+  other
+
+  @@map("payment_method")
+}
+
+/// Doctor and staff accounts for the CRM.
+/// `passwordHash` is null for Google-only users; `googleSub` is null until the
+/// first successful Google sign-in.
+model User {
+  id           String    @id @default(uuid()) @db.Uuid
+  name         String    @db.VarChar(160)
+  email        String    @unique @db.VarChar(320)
+  googleSub    String?   @unique @map("google_sub") @db.VarChar(255)
+  passwordHash String?   @map("password_hash") @db.VarChar(255)
+  role         UserRole
+  active       Boolean   @default(true)
+  lastLoginAt  DateTime? @map("last_login_at") @db.Timestamptz(6)
+  createdAt    DateTime  @default(now()) @map("created_at") @db.Timestamptz(6)
+  updatedAt    DateTime  @updatedAt @map("updated_at") @db.Timestamptz(6)
+
+  createdPatients       Patient[]           @relation("PatientCreatedBy")
+  cancelledAppointments Appointment[]       @relation("AppointmentCancelledBy")
+  availabilityBlocks    AvailabilityBlock[]
+  createdFollowUps      FollowUp[]
+  issuedPrescriptions   Prescription[]
+  issuedReceipts        Receipt[]
+  blogPosts             BlogPost[]
+  auditLogs             AuditLog[]
+
+  @@map("users")
+}
+
+model Patient {
+  id              String        @id @default(uuid()) @db.Uuid
+  name            String        @db.VarChar(160)
+  phone           String        @db.VarChar(32)
+  email           String?       @db.VarChar(320)
+  dob             DateTime?     @db.Date
+  gender          String?       @db.VarChar(32)
+  source          PatientSource
+  createdByUserId String?       @map("created_by_user_id") @db.Uuid
+  notes           String?
+  consentGivenAt  DateTime?     @map("consent_given_at") @db.Timestamptz(6)
+  deletedAt       DateTime?     @map("deleted_at") @db.Timestamptz(6)
+  createdAt       DateTime      @default(now()) @map("created_at") @db.Timestamptz(6)
+  updatedAt       DateTime      @updatedAt @map("updated_at") @db.Timestamptz(6)
+
+  createdBy     User?          @relation("PatientCreatedBy", fields: [createdByUserId], references: [id], onDelete: SetNull)
+  appointments  Appointment[]
+  followUps     FollowUp[]
+  reviews       Review[]
+  messages      Message[]
+  prescriptions Prescription[]
+  receipts      Receipt[]
+
+  @@index([phone])
+  @@index([email])
+  @@index([deletedAt])
+  @@map("patients")
+}
+
+model Service {
+  id              String   @id @default(uuid()) @db.Uuid
+  name            String   @db.VarChar(160)
+  description     String
+  demoVideoUrl    String?  @map("demo_video_url") @db.VarChar(2048)
+  price           Decimal  @db.Decimal(10, 2)
+  durationMinutes Int      @map("duration_minutes")
+  active          Boolean  @default(true)
+  createdAt       DateTime @default(now()) @map("created_at") @db.Timestamptz(6)
+  updatedAt       DateTime @updatedAt @map("updated_at") @db.Timestamptz(6)
+
+  appointments Appointment[]
+
+  @@map("services")
+}
+
+/// Time subtracted from the weekly working-hours template when computing slots.
+model AvailabilityBlock {
+  id              String   @id @default(uuid()) @db.Uuid
+  startDatetime   DateTime @map("start_datetime") @db.Timestamptz(6)
+  endDatetime     DateTime @map("end_datetime") @db.Timestamptz(6)
+  reason          String?  @db.VarChar(255)
+  recurringRule   String?  @map("recurring_rule") @db.VarChar(512)
+  createdByUserId String   @map("created_by_user_id") @db.Uuid
+  createdAt       DateTime @default(now()) @map("created_at") @db.Timestamptz(6)
+  updatedAt       DateTime @updatedAt @map("updated_at") @db.Timestamptz(6)
+
+  createdBy User @relation(fields: [createdByUserId], references: [id], onDelete: Restrict)
+
+  @@index([startDatetime, endDatetime])
+  @@map("availability_blocks")
+}
+
+/// Singleton configuration row: the weekly working-hours template plus the
+/// retention windows referenced by TRD §7.4 (PLAN.md decision 5).
+///
+/// `workingHours` shape — see WeeklyWorkingHours in
+/// src/modules/clinic-settings/clinic-settings.types.ts:
+///   { "monday": [{ "start": "09:00", "end": "13:00" }], ..., "sunday": [] }
+model ClinicSettings {
+  id                            String   @id @default(uuid()) @db.Uuid
+  timezone                      String   @default("Asia/Kolkata") @db.VarChar(64)
+  workingHours                  Json     @map("working_hours")
+  slotBufferMinutes             Int      @default(0) @map("slot_buffer_minutes")
+  followUpReminderLeadDays      Int      @default(2) @map("follow_up_reminder_lead_days")
+  messageLogRetentionMonths     Int      @default(12) @map("message_log_retention_months")
+  patientRecordRetentionYears   Int      @default(7) @map("patient_record_retention_years")
+  medicalRecordRetentionYears   Int      @default(7) @map("medical_record_retention_years")
+  financialRecordRetentionYears Int      @default(8) @map("financial_record_retention_years")
+  createdAt                     DateTime @default(now()) @map("created_at") @db.Timestamptz(6)
+  updatedAt                     DateTime @updatedAt @map("updated_at") @db.Timestamptz(6)
+
+  @@map("clinic_settings")
+}
+
+/// Double-booking is prevented by a partial unique index on
+/// (scheduled_at) WHERE status = 'booked', which the Prisma schema DSL cannot
+/// express. It is created by prisma/migrations/*_appointment_booked_slot_unique.
+model Appointment {
+  id                 String            @id @default(uuid()) @db.Uuid
+  patientId          String            @map("patient_id") @db.Uuid
+  serviceId          String            @map("service_id") @db.Uuid
+  scheduledAt        DateTime          @map("scheduled_at") @db.Timestamptz(6)
+  status             AppointmentStatus
+  bookingSource      BookingSource     @map("booking_source")
+  couponId           String?           @map("coupon_id") @db.Uuid
+  priceCharged       Decimal           @map("price_charged") @db.Decimal(10, 2)
+  paymentStatus      PaymentStatus     @default(pending) @map("payment_status")
+  cancellationReason String?           @map("cancellation_reason")
+  cancelledByUserId  String?           @map("cancelled_by_user_id") @db.Uuid
+  deletedAt          DateTime?         @map("deleted_at") @db.Timestamptz(6)
+  createdAt          DateTime          @default(now()) @map("created_at") @db.Timestamptz(6)
+  updatedAt          DateTime          @updatedAt @map("updated_at") @db.Timestamptz(6)
+
+  patient       Patient        @relation(fields: [patientId], references: [id], onDelete: Restrict)
+  service       Service        @relation(fields: [serviceId], references: [id], onDelete: Restrict)
+  coupon        Coupon?        @relation(fields: [couponId], references: [id], onDelete: SetNull)
+  cancelledBy   User?          @relation("AppointmentCancelledBy", fields: [cancelledByUserId], references: [id], onDelete: SetNull)
+  followUps     FollowUp[]
+  messages      Message[]
+  prescriptions Prescription[]
+  receipts      Receipt[]
+
+  @@index([scheduledAt, status])
+  @@index([patientId])
+  @@index([deletedAt])
+  @@map("appointments")
+}
+
+model FollowUp {
+  id                   String         @id @default(uuid()) @db.Uuid
+  patientId            String         @map("patient_id") @db.Uuid
+  appointmentId        String?        @map("appointment_id") @db.Uuid
+  purpose              String
+  revisitTargetDate    DateTime       @map("revisit_target_date") @db.Date
+  reminderScheduledFor DateTime       @map("reminder_scheduled_for") @db.Timestamptz(6)
+  reminderMessageId    String?        @unique @map("reminder_message_id") @db.Uuid
+  status               FollowUpStatus @default(scheduled)
+  createdByUserId      String         @map("created_by_user_id") @db.Uuid
+  createdAt            DateTime       @default(now()) @map("created_at") @db.Timestamptz(6)
+  updatedAt            DateTime       @updatedAt @map("updated_at") @db.Timestamptz(6)
+
+  patient         Patient      @relation(fields: [patientId], references: [id], onDelete: Restrict)
+  appointment     Appointment? @relation(fields: [appointmentId], references: [id], onDelete: SetNull)
+  reminderMessage Message?     @relation("FollowUpReminderMessage", fields: [reminderMessageId], references: [id], onDelete: SetNull)
+  createdBy       User         @relation(fields: [createdByUserId], references: [id], onDelete: Restrict)
+  messages        Message[]    @relation("MessageFollowUp")
+
+  @@index([patientId])
+  @@index([reminderScheduledFor, status])
+  @@map("follow_ups")
+}
+
+model Coupon {
+  id          String          @id @default(uuid()) @db.Uuid
+  code        String          @unique @db.VarChar(64)
+  description String          @db.VarChar(255)
+  valueType   CouponValueType @map("value_type")
+  value       Decimal         @db.Decimal(10, 2)
+  validFrom   DateTime        @map("valid_from") @db.Timestamptz(6)
+  validUntil  DateTime        @map("valid_until") @db.Timestamptz(6)
+  maxUses     Int?            @map("max_uses")
+  usedCount   Int             @default(0) @map("used_count")
+  active      Boolean         @default(true)
+  createdAt   DateTime        @default(now()) @map("created_at") @db.Timestamptz(6)
+  updatedAt   DateTime        @updatedAt @map("updated_at") @db.Timestamptz(6)
+
+  appointments Appointment[]
+
+  @@map("coupons")
+}
+
+model Review {
+  id          String   @id @default(uuid()) @db.Uuid
+  patientName String   @map("patient_name") @db.VarChar(160)
+  patientId   String?  @map("patient_id") @db.Uuid
+  photoUrl    String?  @map("photo_url") @db.VarChar(2048)
+  rating      Int      @db.SmallInt
+  comment     String
+  active      Boolean  @default(true)
+  createdAt   DateTime @default(now()) @map("created_at") @db.Timestamptz(6)
+  updatedAt   DateTime @updatedAt @map("updated_at") @db.Timestamptz(6)
+
+  patient Patient? @relation(fields: [patientId], references: [id], onDelete: SetNull)
+
+  @@map("reviews")
+}
+
+model Message {
+  id                String        @id @default(uuid()) @db.Uuid
+  type              MessageType
+  patientId         String        @map("patient_id") @db.Uuid
+  appointmentId     String?       @map("appointment_id") @db.Uuid
+  followUpId        String?       @map("follow_up_id") @db.Uuid
+  templateId        String        @map("template_id") @db.Uuid
+  renderedContent   String        @map("rendered_content")
+  status            MessageStatus @default(pending)
+  providerMessageId String?       @map("provider_message_id") @db.VarChar(255)
+  scheduledFor      DateTime      @map("scheduled_for") @db.Timestamptz(6)
+  sentAt            DateTime?     @map("sent_at") @db.Timestamptz(6)
+  failureReason     String?       @map("failure_reason")
+  createdAt         DateTime      @default(now()) @map("created_at") @db.Timestamptz(6)
+  updatedAt         DateTime      @updatedAt @map("updated_at") @db.Timestamptz(6)
+
+  patient          Patient         @relation(fields: [patientId], references: [id], onDelete: Restrict)
+  appointment      Appointment?    @relation(fields: [appointmentId], references: [id], onDelete: SetNull)
+  followUp         FollowUp?       @relation("MessageFollowUp", fields: [followUpId], references: [id], onDelete: SetNull)
+  template         MessageTemplate @relation(fields: [templateId], references: [id], onDelete: Restrict)
+  remindedFollowUp FollowUp?       @relation("FollowUpReminderMessage")
+
+  @@index([patientId])
+  @@index([status, scheduledFor])
+  @@map("messages")
+}
+
+model MessageTemplate {
+  id           String      @id @default(uuid()) @db.Uuid
+  type         MessageType
+  label        String      @db.VarChar(160)
+  bodyTemplate String      @map("body_template")
+  active       Boolean     @default(true)
+  createdAt    DateTime    @default(now()) @map("created_at") @db.Timestamptz(6)
+  updatedAt    DateTime    @updatedAt @map("updated_at") @db.Timestamptz(6)
+
+  messages Message[]
+
+  @@unique([type, label])
+  @@map("message_templates")
+}
+
+model Prescription {
+  id             String    @id @default(uuid()) @db.Uuid
+  patientId      String    @map("patient_id") @db.Uuid
+  appointmentId  String?   @map("appointment_id") @db.Uuid
+  /// Structured content: { medicines: [], exercises: [], instructions: string }
+  content        Json
+  issuedByUserId String    @map("issued_by_user_id") @db.Uuid
+  issuedAt       DateTime  @default(now()) @map("issued_at") @db.Timestamptz(6)
+  pdfStorageKey  String?   @map("pdf_storage_key") @db.VarChar(1024)
+  deletedAt      DateTime? @map("deleted_at") @db.Timestamptz(6)
+  createdAt      DateTime  @default(now()) @map("created_at") @db.Timestamptz(6)
+  updatedAt      DateTime  @updatedAt @map("updated_at") @db.Timestamptz(6)
+
+  patient     Patient      @relation(fields: [patientId], references: [id], onDelete: Restrict)
+  appointment Appointment? @relation(fields: [appointmentId], references: [id], onDelete: SetNull)
+  issuedBy    User         @relation(fields: [issuedByUserId], references: [id], onDelete: Restrict)
+
+  @@index([patientId])
+  @@index([deletedAt])
+  @@map("prescriptions")
+}
+
+model Receipt {
+  id             String        @id @default(uuid()) @db.Uuid
+  patientId      String        @map("patient_id") @db.Uuid
+  appointmentId  String?       @map("appointment_id") @db.Uuid
+  amount         Decimal       @db.Decimal(10, 2)
+  paymentMethod  PaymentMethod @map("payment_method")
+  pdfStorageKey  String?       @map("pdf_storage_key") @db.VarChar(1024)
+  issuedByUserId String        @map("issued_by_user_id") @db.Uuid
+  issuedAt       DateTime      @default(now()) @map("issued_at") @db.Timestamptz(6)
+  deletedAt      DateTime?     @map("deleted_at") @db.Timestamptz(6)
+  createdAt      DateTime      @default(now()) @map("created_at") @db.Timestamptz(6)
+  updatedAt      DateTime      @updatedAt @map("updated_at") @db.Timestamptz(6)
+
+  patient     Patient      @relation(fields: [patientId], references: [id], onDelete: Restrict)
+  appointment Appointment? @relation(fields: [appointmentId], references: [id], onDelete: SetNull)
+  issuedBy    User         @relation(fields: [issuedByUserId], references: [id], onDelete: Restrict)
+
+  @@index([patientId])
+  @@index([deletedAt])
+  @@map("receipts")
+}
+
+model BlogPost {
+  id            String    @id @default(uuid()) @db.Uuid
+  title         String    @db.VarChar(255)
+  slug          String    @unique @db.VarChar(255)
+  content       String
+  coverImageUrl String?   @map("cover_image_url") @db.VarChar(2048)
+  published     Boolean   @default(false)
+  publishedAt   DateTime? @map("published_at") @db.Timestamptz(6)
+  authorUserId  String    @map("author_user_id") @db.Uuid
+  createdAt     DateTime  @default(now()) @map("created_at") @db.Timestamptz(6)
+  updatedAt     DateTime  @updatedAt @map("updated_at") @db.Timestamptz(6)
+
+  author User @relation(fields: [authorUserId], references: [id], onDelete: Restrict)
+
+  @@index([published, publishedAt])
+  @@map("blog_posts")
+}
+
+model AuditLog {
+  id         String   @id @default(uuid()) @db.Uuid
+  userId     String   @map("user_id") @db.Uuid
+  action     String   @db.VarChar(128)
+  entityType String   @map("entity_type") @db.VarChar(64)
+  entityId   String?  @map("entity_id") @db.Uuid
+  metadata   Json?
+  ipAddress  String?  @map("ip_address") @db.VarChar(64)
+  createdAt  DateTime @default(now()) @map("created_at") @db.Timestamptz(6)
+
+  user User @relation(fields: [userId], references: [id], onDelete: Restrict)
+
+  @@index([createdAt])
+  @@index([userId, createdAt])
+  @@index([entityType, entityId])
+  @@map("audit_logs")
 }

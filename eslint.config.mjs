@@ -30,4 +30,22 @@ export default tseslint.config(
       'prettier/prettier': ['error', { endOfLine: 'auto' }],
     },
   },
+  {
+    // Test-only relaxations, scoped to test files so production code keeps the
+    // full strictness. `supertest`'s Response.body and Nest's getHttpServer()
+    // are untyped by design, and Jest's mock assertions read methods off an
+    // object, which `unbound-method` cannot distinguish from a real unbound
+    // call. `no-require-imports` is needed where a module must be loaded after
+    // the environment has been mutated.
+    files: ['**/*.spec.ts', 'test/**/*.ts'],
+    rules: {
+      '@typescript-eslint/no-unsafe-argument': 'off',
+      '@typescript-eslint/no-unsafe-assignment': 'off',
+      '@typescript-eslint/no-unsafe-call': 'off',
+      '@typescript-eslint/no-unsafe-member-access': 'off',
+      '@typescript-eslint/no-unsafe-return': 'off',
+      '@typescript-eslint/unbound-method': 'off',
+      '@typescript-eslint/no-require-imports': 'off',
+    },
+  },
 );

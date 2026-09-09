@@ -1,4 +1,7 @@
 {
   "extends": "./tsconfig.json",
-  "exclude": ["node_modules", "dist", "scripts", "**/*spec.ts"]
+  // `prisma` and `test` are type-checked by tsconfig.json but must stay out of
+  // the build: including them would lift the inferred root above `src` and emit
+  // to dist/src/, breaking `node dist/main.js`.
+  "exclude": ["node_modules", "dist", "scripts", "prisma", "test", "**/*spec.ts"]
 }

@@ -4,6 +4,11 @@ import Redis from 'ioredis';
 import { InjectPinoLogger, PinoLogger } from 'nestjs-pino';
 import type { EnvironmentVariables } from '../../config/environment';
 
+/**
+ * Owns the Redis connection and exposes the narrow set of operations the
+ * application needs. The client itself stays private so no consumer can reach
+ * past this surface (ISP — EXECUTION-PLAN §4.3).
+ */
 @Injectable()
 export class RedisService implements OnModuleDestroy {
   private readonly client: Redis;
@@ -31,5 +36,55 @@ export class RedisService implements OnModuleDestroy {
 
   async ping(): Promise<void> {
     await this.client.ping();
+  }
+
+  async readJson<T>(key: string): Promise<T | null> {
+    const raw = await this.client.get(key);
+    return raw === null ? null : (JSON.parse(raw) as T);
+  }
+
+  async writeJson(
+    key: string,
+    value: unknown,
+    ttlSeconds: number,
+  ): Promise<void> {
+    await this.client.set(key, JSON.stringify(value), 'EX', ttlSeconds);
+  }
+
+  async delete(...keys: string[]): Promise<void> {
+    if (keys.length > 0) {
+      await this.client.del(...keys);
+    }
+  }
+
+  async addToSet(
+    key: string,
+    member: string,
+    ttlSeconds: number,
+  ): Promise<void> {
+    await this.client.multi().sadd(key, member).expire(key, ttlSeconds).exec();
+  }
+
+  async readSetMembers(key: string): Promise<string[]> {
+    return this.client.smembers(key);
+  }
+
+  async readCounter(key: string): Promise<number> {
+    const raw = await this.client.get(key);
+    return raw === null ? 0 : Number.parseInt(raw, 10);
+  }
+
+  /**
+   * Increments a counter, setting its expiry on first write. Returns the value
+   * after the increment so callers can compare it against a limit.
+   */
+  async incrementWithExpiry(key: string, ttlSeconds: number): Promise<number> {
+    const results = await this.client
+      .multi()
+      .incr(key)
+      .expire(key, ttlSeconds, 'NX')
+      .exec();
+    const incremented = results?.[0]?.[1];
+    return typeof incremented === 'number' ? incremented : 0;
   }
 }

@@ -37,6 +37,18 @@ jobs:
       # openapi.json is the contract both frontends generate their types from,
       # so a stale committed spec silently desynchronises three repos.
       - name: Check openapi.json is up to date
+        env:
+          # Generating the spec boots the Nest application, so it has to satisfy
+          # environment validation. Nothing here is contacted — no request is
+          # ever made — and the signing key is never used to mint a token.
+          DATABASE_URL: postgresql://physio:physio@localhost:5432/physio?schema=public
+          REDIS_URL: redis://localhost:6379
+          JWT_ACCESS_SECRET: ci-openapi-generation-key-never-signs-a-real-token
+          # The committed contract is the dev-bypass contract: while decision B6
+          # stands, /auth/dev-login is how the CRM signs in, so the CRM must be
+          # able to generate a type for it. Flip this to false in the same
+          # commit that deletes the bypass.
+          AUTH_DEV_BYPASS: 'true'
         run: |
           npm run generate:openapi
           git diff --exit-code openapi.json

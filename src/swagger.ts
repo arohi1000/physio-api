@@ -12,6 +12,12 @@ export function buildOpenApiDocument(app: INestApplication): OpenAPIObject {
         'This specification is the contract the website and CRM generate their types from.',
     )
     .setVersion('1.0.0')
+    .addBearerAuth({
+      type: 'http',
+      scheme: 'bearer',
+      bearerFormat: 'JWT',
+      description: 'CRM access token from POST /auth/google or /auth/login.',
+    })
     .build();
 
   return SwaggerModule.createDocument(app, config);
