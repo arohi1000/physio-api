@@ -1,0 +1,47 @@
+name: physio
+
+services:
+  postgres:
+    image: postgres:15
+    container_name: physio-postgres
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: ${POSTGRES_USER:-physio}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-physio}
+      POSTGRES_DB: ${POSTGRES_DB:-physio}
+    ports:
+      # Host port is deliberately non-default so it cannot collide with a
+      # locally installed PostgreSQL.
+      - '5433:5432'
+    volumes:
+      - physio-postgres-data:/var/lib/postgresql/data
+    healthcheck:
+      test:
+        [
+          'CMD-SHELL',
+          'pg_isready -U ${POSTGRES_USER:-physio} -d ${POSTGRES_DB:-physio}',
+        ]
+      interval: 5s
+      timeout: 5s
+      retries: 12
+      start_period: 10s
+
+  redis:
+    image: redis:7
+    container_name: physio-redis
+    restart: unless-stopped
+    command: ['redis-server', '--appendonly', 'yes']
+    ports:
+      - '6380:6379'
+    volumes:
+      - physio-redis-data:/data
+    healthcheck:
+      test: ['CMD', 'redis-cli', 'ping']
+      interval: 5s
+      timeout: 5s
+      retries: 12
+      start_period: 5s
+
+volumes:
+  physio-postgres-data:
+  physio-redis-data:

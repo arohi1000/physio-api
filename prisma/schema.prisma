@@ -1,0 +1,12 @@
+// Physio Clinic API — Prisma schema.
+// Milestone 0 establishes the datasource and generator only; the domain model
+// (TRD §4) lands in Milestone 1.
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}

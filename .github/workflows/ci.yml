@@ -1,0 +1,42 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  verify:
+    name: Lint, typecheck, test, build
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version-file: .node-version
+          cache: npm
+
+      # `npm ci` triggers the postinstall hook, which runs `prisma generate`.
+      # No database is required for that, so this job needs no services.
+      - run: npm ci
+
+      - run: npm run lint
+
+      - run: npm run typecheck
+
+      - run: npm test
+
+      - run: npm run build
+
+      # openapi.json is the contract both frontends generate their types from,
+      # so a stale committed spec silently desynchronises three repos.
+      - name: Check openapi.json is up to date
+        run: |
+          npm run generate:openapi
+          git diff --exit-code openapi.json
