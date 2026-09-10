@@ -16,9 +16,15 @@ import {
   EnvironmentVariables,
   validateEnvironment,
 } from './config/environment';
+import { AppointmentsModule } from './modules/appointments/appointments.module';
 import { AuditModule } from './modules/audit/audit.module';
 import { AuthModule } from './modules/auth/auth.module';
+import { AvailabilityModule } from './modules/availability/availability.module';
+import { ClinicSettingsModule } from './modules/clinic-settings/clinic-settings.module';
+import { CouponsModule } from './modules/coupons/coupons.module';
 import { HealthModule } from './modules/health/health.module';
+import { PatientsModule } from './modules/patients/patients.module';
+import { ServicesModule } from './modules/services/services.module';
 
 @Module({
   imports: [
@@ -40,6 +46,12 @@ import { HealthModule } from './modules/health/health.module';
     HealthModule,
     AuthModule.register(),
     AuditModule,
+    ClinicSettingsModule,
+    ServicesModule,
+    PatientsModule,
+    CouponsModule,
+    AvailabilityModule,
+    AppointmentsModule,
   ],
   providers: [
     {

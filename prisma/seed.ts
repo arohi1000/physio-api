@@ -1,4 +1,5 @@
 import {
+  CouponValueType,
   MessageType,
   PrismaClient,
   UserRole,
@@ -24,30 +25,33 @@ const STAFF_EMAIL = (
   process.env.SEED_STAFF_EMAIL ?? 'staff@physioclinic.local'
 ).toLowerCase();
 
-/** Mon–Sat morning and evening clinics; Sunday closed. Times are Asia/Kolkata. */
+/**
+ * Mon–Fri morning and evening clinics, Sat morning only, Sunday closed. Times
+ * are Asia/Kolkata. Fixed by M2-CONTRACT.md §4 — do not invent alternatives.
+ */
 const WEEKLY_WORKING_HOURS: WeeklyWorkingHours = {
-  monday: [
+  mon: [
     { start: '09:00', end: '13:00' },
-    { start: '17:00', end: '20:00' },
+    { start: '16:00', end: '19:00' },
   ],
-  tuesday: [
+  tue: [
     { start: '09:00', end: '13:00' },
-    { start: '17:00', end: '20:00' },
+    { start: '16:00', end: '19:00' },
   ],
-  wednesday: [
+  wed: [
     { start: '09:00', end: '13:00' },
-    { start: '17:00', end: '20:00' },
+    { start: '16:00', end: '19:00' },
   ],
-  thursday: [
+  thu: [
     { start: '09:00', end: '13:00' },
-    { start: '17:00', end: '20:00' },
+    { start: '16:00', end: '19:00' },
   ],
-  friday: [
+  fri: [
     { start: '09:00', end: '13:00' },
-    { start: '17:00', end: '20:00' },
+    { start: '16:00', end: '19:00' },
   ],
-  saturday: [{ start: '09:00', end: '14:00' }],
-  sunday: [],
+  sat: [{ start: '09:00', end: '13:00' }],
+  sun: [],
 };
 
 const SERVICES = [
@@ -98,6 +102,70 @@ const SERVICES = [
     price: '800.00',
     durationMinutes: 30,
     demoVideoUrl: null,
+  },
+] as const;
+
+/**
+ * Fixed by M2-CONTRACT.md §4 — exact codes/values/states so both frontend
+ * agents can demo every coupon branch against a known fixture.
+ */
+const NOW = new Date();
+const ONE_DAY_MS = 24 * 60 * 60 * 1000;
+const COUPONS = [
+  {
+    code: 'WELCOME10',
+    description: '10% off for first-time patients',
+    valueType: CouponValueType.percent,
+    value: '10.00',
+    validFrom: new Date(NOW.getTime() - 365 * ONE_DAY_MS),
+    validUntil: new Date(NOW.getTime() + 365 * ONE_DAY_MS),
+    maxUses: null,
+    usedCount: 0,
+    active: true,
+  },
+  {
+    code: 'FLAT200',
+    description: 'Flat ₹200 off',
+    valueType: CouponValueType.fixed,
+    value: '200.00',
+    validFrom: new Date(NOW.getTime() - 365 * ONE_DAY_MS),
+    validUntil: new Date(NOW.getTime() + 365 * ONE_DAY_MS),
+    maxUses: null,
+    usedCount: 0,
+    active: true,
+  },
+  {
+    code: 'EXPIRED50',
+    description: 'Expired half-off promotion',
+    valueType: CouponValueType.percent,
+    value: '50.00',
+    validFrom: new Date(NOW.getTime() - 365 * ONE_DAY_MS),
+    validUntil: new Date(NOW.getTime() - ONE_DAY_MS),
+    maxUses: null,
+    usedCount: 0,
+    active: true,
+  },
+  {
+    code: 'USEDUP',
+    description: 'Fixed ₹100 off, exhausted',
+    valueType: CouponValueType.fixed,
+    value: '100.00',
+    validFrom: new Date(NOW.getTime() - 365 * ONE_DAY_MS),
+    validUntil: new Date(NOW.getTime() + 365 * ONE_DAY_MS),
+    maxUses: 5,
+    usedCount: 5,
+    active: true,
+  },
+  {
+    code: 'PAUSED25',
+    description: '25% off, currently paused',
+    valueType: CouponValueType.percent,
+    value: '25.00',
+    validFrom: new Date(NOW.getTime() - 365 * ONE_DAY_MS),
+    validUntil: new Date(NOW.getTime() + 365 * ONE_DAY_MS),
+    maxUses: null,
+    usedCount: 0,
+    active: false,
   },
 ] as const;
 
@@ -255,7 +323,7 @@ async function seedClinicSettings(): Promise<void> {
   }
 
   await prisma.clinicSettings.create({
-    data: { workingHours, timezone: 'Asia/Kolkata' },
+    data: { workingHours, timezone: 'Asia/Kolkata', slotBufferMinutes: 0 },
   });
 }
 
@@ -273,6 +341,25 @@ async function seedServices(): Promise<void> {
     } else {
       await prisma.service.create({ data: { ...service, active: true } });
     }
+  }
+}
+
+async function seedCoupons(): Promise<void> {
+  for (const coupon of COUPONS) {
+    await prisma.coupon.upsert({
+      where: { code: coupon.code },
+      update: {
+        description: coupon.description,
+        valueType: coupon.valueType,
+        value: coupon.value,
+        validFrom: coupon.validFrom,
+        validUntil: coupon.validUntil,
+        maxUses: coupon.maxUses,
+        usedCount: coupon.usedCount,
+        active: coupon.active,
+      },
+      create: { ...coupon },
+    });
   }
 }
 
@@ -324,6 +411,7 @@ async function main(): Promise<void> {
   const { doctorId } = await seedUsers();
   await seedClinicSettings();
   await seedServices();
+  await seedCoupons();
   await seedMessageTemplates();
   await seedReviews();
   await seedBlogPosts(doctorId);
@@ -332,6 +420,7 @@ async function main(): Promise<void> {
     users: await prisma.user.count(),
     services: await prisma.service.count(),
     clinicSettings: await prisma.clinicSettings.count(),
+    coupons: await prisma.coupon.count(),
     messageTemplates: await prisma.messageTemplate.count(),
     reviews: await prisma.review.count(),
     blogPosts: await prisma.blogPost.count(),

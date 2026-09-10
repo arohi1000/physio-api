@@ -291,6 +291,667 @@
           "admin"
         ]
       }
+    },
+    "/api/v1/admin/clinic-settings": {
+      "get": {
+        "operationId": "ClinicSettingsController_getSettings",
+        "parameters": [],
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ClinicSettingsDto"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Read the clinic-wide settings and working hours",
+        "tags": [
+          "admin/clinic-settings"
+        ]
+      },
+      "put": {
+        "operationId": "ClinicSettingsController_updateSettings",
+        "parameters": [],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/UpdateClinicSettingsDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ClinicSettingsDto"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Update the clinic-wide settings and working hours",
+        "tags": [
+          "admin/clinic-settings"
+        ]
+      }
+    },
+    "/api/v1/services": {
+      "get": {
+        "operationId": "ServicesController_list",
+        "parameters": [],
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/ServiceDto"
+                  }
+                }
+              }
+            }
+          }
+        },
+        "summary": "Active treatment services, name-ordered",
+        "tags": [
+          "services"
+        ]
+      }
+    },
+    "/api/v1/coupons/validate": {
+      "post": {
+        "description": "Read-only — never increments used_count.",
+        "operationId": "CouponsController_validate",
+        "parameters": [],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ValidateCouponDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CouponPreviewResponseDto"
+                }
+              }
+            }
+          }
+        },
+        "summary": "Preview a coupon against a service price",
+        "tags": [
+          "coupons"
+        ]
+      }
+    },
+    "/api/v1/availability": {
+      "get": {
+        "description": "An empty `slots` array is a valid, non-error response (fully booked or a closed day). Redis-cached ~60s.",
+        "operationId": "AvailabilityController_getAvailability",
+        "parameters": [
+          {
+            "name": "serviceId",
+            "required": true,
+            "in": "query",
+            "schema": {
+              "format": "uuid",
+              "type": "string"
+            }
+          },
+          {
+            "name": "date",
+            "required": true,
+            "in": "query",
+            "description": "Local calendar date in the clinic timezone",
+            "schema": {
+              "example": "2026-03-05",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AvailabilityResponseDto"
+                }
+              }
+            }
+          }
+        },
+        "summary": "Bookable slots for a service on a local calendar date",
+        "tags": [
+          "availability"
+        ]
+      }
+    },
+    "/api/v1/admin/availability-blocks": {
+      "get": {
+        "operationId": "AvailabilityBlocksController_list",
+        "parameters": [
+          {
+            "name": "from",
+            "required": true,
+            "in": "query",
+            "schema": {
+              "example": "2026-03-01T00:00:00.000Z",
+              "type": "string"
+            }
+          },
+          {
+            "name": "to",
+            "required": true,
+            "in": "query",
+            "schema": {
+              "example": "2026-04-01T00:00:00.000Z",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/AvailabilityBlockDto"
+                  }
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "List availability blocks overlapping a range",
+        "tags": [
+          "admin/availability-blocks"
+        ]
+      },
+      "post": {
+        "description": "Overlapping an existing booking always succeeds — the booking is never cancelled, only reported back in affectedAppointments.",
+        "operationId": "AvailabilityBlocksController_create",
+        "parameters": [],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CreateAvailabilityBlockDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AvailabilityBlockWithWarningsDto"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Create an availability block",
+        "tags": [
+          "admin/availability-blocks"
+        ]
+      }
+    },
+    "/api/v1/admin/availability-blocks/{id}": {
+      "patch": {
+        "operationId": "AvailabilityBlocksController_update",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/UpdateAvailabilityBlockDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AvailabilityBlockWithWarningsDto"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Update an availability block",
+        "tags": [
+          "admin/availability-blocks"
+        ]
+      },
+      "delete": {
+        "operationId": "AvailabilityBlocksController_remove",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "204": {
+            "description": ""
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Delete an availability block",
+        "tags": [
+          "admin/availability-blocks"
+        ]
+      }
+    },
+    "/api/v1/appointments": {
+      "post": {
+        "operationId": "AppointmentsController_book",
+        "parameters": [],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CreateAppointmentDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AppointmentResponseDto"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "SLOT_UNAVAILABLE"
+          },
+          "422": {
+            "description": "SLOT_OUTSIDE_AVAILABILITY | CONSENT_REQUIRED | COUPON_*"
+          }
+        },
+        "summary": "Guest booking",
+        "tags": [
+          "appointments"
+        ]
+      }
+    },
+    "/api/v1/appointments/reschedule/{token}": {
+      "get": {
+        "description": "Never returns the full patient record — name and phone only. Single-use: a second call is RESCHEDULE_TOKEN_INVALID.",
+        "operationId": "AppointmentsController_resolveReschedule",
+        "parameters": [
+          {
+            "name": "token",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ReschedulePrefillDto"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "RESCHEDULE_TOKEN_INVALID"
+          }
+        },
+        "summary": "Resolve a signed rebooking link to prefill data",
+        "tags": [
+          "appointments"
+        ]
+      }
+    },
+    "/api/v1/admin/appointments": {
+      "get": {
+        "operationId": "AdminAppointmentsController_list",
+        "parameters": [
+          {
+            "name": "status",
+            "required": false,
+            "in": "query",
+            "schema": {
+              "type": "string",
+              "enum": [
+                "booked",
+                "completed",
+                "cancelled",
+                "no_show"
+              ]
+            }
+          },
+          {
+            "name": "from",
+            "required": false,
+            "in": "query",
+            "schema": {
+              "example": "2026-03-01T00:00:00.000Z",
+              "type": "string"
+            }
+          },
+          {
+            "name": "to",
+            "required": false,
+            "in": "query",
+            "schema": {
+              "example": "2026-04-01T00:00:00.000Z",
+              "type": "string"
+            }
+          },
+          {
+            "name": "serviceId",
+            "required": false,
+            "in": "query",
+            "schema": {
+              "format": "uuid",
+              "type": "string"
+            }
+          },
+          {
+            "name": "search",
+            "required": false,
+            "in": "query",
+            "description": "Matches patient name or phone",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "page",
+            "required": false,
+            "in": "query",
+            "schema": {
+              "default": 1,
+              "type": "number"
+            }
+          },
+          {
+            "name": "limit",
+            "required": false,
+            "in": "query",
+            "schema": {
+              "default": 20,
+              "type": "number"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PaginatedAdminAppointmentsDto"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "List appointments, filtered and paginated",
+        "tags": [
+          "admin/appointments"
+        ]
+      },
+      "post": {
+        "description": "Same slot rules as the public booking endpoint.",
+        "operationId": "AdminAppointmentsController_create",
+        "parameters": [],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CreateAdminAppointmentDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AdminAppointmentDetailDto"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Manual / walk-in booking",
+        "tags": [
+          "admin/appointments"
+        ]
+      }
+    },
+    "/api/v1/admin/appointments/{id}": {
+      "get": {
+        "operationId": "AdminAppointmentsController_getById",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AdminAppointmentDetailDto"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Appointment detail",
+        "tags": [
+          "admin/appointments"
+        ]
+      },
+      "patch": {
+        "operationId": "AdminAppointmentsController_update",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/UpdateAppointmentDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AdminAppointmentDetailDto"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "SLOT_UNAVAILABLE"
+          },
+          "422": {
+            "description": "SLOT_OUTSIDE_AVAILABILITY"
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Reschedule or change the status of an appointment",
+        "tags": [
+          "admin/appointments"
+        ]
+      }
+    },
+    "/api/v1/admin/appointments/{id}/cancel": {
+      "post": {
+        "operationId": "AdminAppointmentsController_cancel",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CancelAppointmentDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AdminAppointmentDetailDto"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "APPOINTMENT_NOT_CANCELLABLE"
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Cancel an appointment",
+        "tags": [
+          "admin/appointments"
+        ]
+      }
     }
   },
   "info": {
@@ -558,6 +1219,960 @@
           "total",
           "page",
           "pageSize"
+        ]
+      },
+      "WorkingIntervalDto": {
+        "type": "object",
+        "properties": {
+          "start": {
+            "type": "string",
+            "example": "09:00"
+          },
+          "end": {
+            "type": "string",
+            "example": "13:00"
+          }
+        },
+        "required": [
+          "start",
+          "end"
+        ]
+      },
+      "WeeklyWorkingHoursDto": {
+        "type": "object",
+        "properties": {
+          "mon": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/WorkingIntervalDto"
+            }
+          },
+          "tue": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/WorkingIntervalDto"
+            }
+          },
+          "wed": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/WorkingIntervalDto"
+            }
+          },
+          "thu": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/WorkingIntervalDto"
+            }
+          },
+          "fri": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/WorkingIntervalDto"
+            }
+          },
+          "sat": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/WorkingIntervalDto"
+            }
+          },
+          "sun": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/WorkingIntervalDto"
+            }
+          }
+        },
+        "required": [
+          "mon",
+          "tue",
+          "wed",
+          "thu",
+          "fri",
+          "sat",
+          "sun"
+        ]
+      },
+      "ClinicSettingsDto": {
+        "type": "object",
+        "properties": {
+          "timezone": {
+            "type": "string",
+            "example": "Asia/Kolkata"
+          },
+          "workingHours": {
+            "$ref": "#/components/schemas/WeeklyWorkingHoursDto"
+          },
+          "slotBufferMinutes": {
+            "type": "number",
+            "example": 0
+          }
+        },
+        "required": [
+          "timezone",
+          "workingHours",
+          "slotBufferMinutes"
+        ]
+      },
+      "UpdateClinicSettingsDto": {
+        "type": "object",
+        "properties": {
+          "workingHours": {
+            "$ref": "#/components/schemas/WeeklyWorkingHoursDto"
+          },
+          "slotBufferMinutes": {
+            "type": "number",
+            "example": 0
+          },
+          "timezone": {
+            "type": "string",
+            "example": "Asia/Kolkata"
+          }
+        }
+      },
+      "ServiceDto": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "name": {
+            "type": "string",
+            "example": "Manual Therapy Session"
+          },
+          "description": {
+            "type": "string"
+          },
+          "demoVideoUrl": {
+            "type": "object",
+            "nullable": true,
+            "example": "https://…"
+          },
+          "price": {
+            "type": "string",
+            "example": "1000.00",
+            "description": "Decimal rupees, never a float"
+          },
+          "durationMinutes": {
+            "type": "number",
+            "example": 45
+          }
+        },
+        "required": [
+          "id",
+          "name",
+          "description",
+          "demoVideoUrl",
+          "price",
+          "durationMinutes"
+        ]
+      },
+      "ValidateCouponDto": {
+        "type": "object",
+        "properties": {
+          "code": {
+            "type": "string",
+            "example": "WELCOME10"
+          },
+          "serviceId": {
+            "type": "string",
+            "format": "uuid"
+          }
+        },
+        "required": [
+          "code",
+          "serviceId"
+        ]
+      },
+      "CouponPreviewResponseDto": {
+        "type": "object",
+        "properties": {
+          "code": {
+            "type": "string",
+            "example": "WELCOME10"
+          },
+          "valueType": {
+            "type": "string",
+            "enum": [
+              "percent",
+              "fixed"
+            ]
+          },
+          "value": {
+            "type": "string",
+            "example": "10.00"
+          },
+          "originalPrice": {
+            "type": "string",
+            "example": "1000.00"
+          },
+          "discountAmount": {
+            "type": "string",
+            "example": "100.00"
+          },
+          "finalPrice": {
+            "type": "string",
+            "example": "900.00"
+          }
+        },
+        "required": [
+          "code",
+          "valueType",
+          "value",
+          "originalPrice",
+          "discountAmount",
+          "finalPrice"
+        ]
+      },
+      "SlotDto": {
+        "type": "object",
+        "properties": {
+          "startsAt": {
+            "type": "string",
+            "example": "2026-03-05T04:30:00.000Z"
+          },
+          "endsAt": {
+            "type": "string",
+            "example": "2026-03-05T05:15:00.000Z"
+          }
+        },
+        "required": [
+          "startsAt",
+          "endsAt"
+        ]
+      },
+      "AvailabilityResponseDto": {
+        "type": "object",
+        "properties": {
+          "date": {
+            "type": "string",
+            "example": "2026-03-05"
+          },
+          "timezone": {
+            "type": "string",
+            "example": "Asia/Kolkata"
+          },
+          "serviceId": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "durationMinutes": {
+            "type": "number",
+            "example": 45
+          },
+          "slots": {
+            "description": "Bookable slots. An empty array is a valid, non-error response.",
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/SlotDto"
+            }
+          }
+        },
+        "required": [
+          "date",
+          "timezone",
+          "serviceId",
+          "durationMinutes",
+          "slots"
+        ]
+      },
+      "AvailabilityBlockDto": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "startsAt": {
+            "type": "string",
+            "example": "2026-03-05T04:30:00.000Z"
+          },
+          "endsAt": {
+            "type": "string",
+            "example": "2026-03-05T09:30:00.000Z"
+          },
+          "reason": {
+            "type": "object",
+            "nullable": true,
+            "example": "Personal leave"
+          },
+          "recurringRule": {
+            "type": "object",
+            "nullable": true,
+            "example": "FREQ=WEEKLY;COUNT=6"
+          }
+        },
+        "required": [
+          "id",
+          "startsAt",
+          "endsAt",
+          "reason",
+          "recurringRule"
+        ]
+      },
+      "CreateAvailabilityBlockDto": {
+        "type": "object",
+        "properties": {
+          "startsAt": {
+            "type": "string",
+            "example": "2026-03-05T04:30:00.000Z"
+          },
+          "endsAt": {
+            "type": "string",
+            "example": "2026-03-05T09:30:00.000Z"
+          },
+          "reason": {
+            "type": "string",
+            "example": "Personal leave"
+          },
+          "recurringRule": {
+            "type": "string",
+            "example": "FREQ=WEEKLY;COUNT=6",
+            "description": "RRULE string, anchored to startsAt as DTSTART."
+          }
+        },
+        "required": [
+          "startsAt",
+          "endsAt"
+        ]
+      },
+      "AffectedAppointmentDto": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "startsAt": {
+            "type": "string",
+            "example": "2026-03-05T05:00:00.000Z"
+          },
+          "patientName": {
+            "type": "string",
+            "example": "Asha Kumar"
+          }
+        },
+        "required": [
+          "id",
+          "startsAt",
+          "patientName"
+        ]
+      },
+      "AvailabilityBlockWithWarningsDto": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "startsAt": {
+            "type": "string",
+            "example": "2026-03-05T04:30:00.000Z"
+          },
+          "endsAt": {
+            "type": "string",
+            "example": "2026-03-05T09:30:00.000Z"
+          },
+          "reason": {
+            "type": "object",
+            "nullable": true,
+            "example": "Personal leave"
+          },
+          "recurringRule": {
+            "type": "object",
+            "nullable": true,
+            "example": "FREQ=WEEKLY;COUNT=6"
+          },
+          "affectedAppointments": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/AffectedAppointmentDto"
+            }
+          }
+        },
+        "required": [
+          "id",
+          "startsAt",
+          "endsAt",
+          "reason",
+          "recurringRule",
+          "affectedAppointments"
+        ]
+      },
+      "UpdateAvailabilityBlockDto": {
+        "type": "object",
+        "properties": {
+          "startsAt": {
+            "type": "string",
+            "example": "2026-03-05T04:30:00.000Z"
+          },
+          "endsAt": {
+            "type": "string",
+            "example": "2026-03-05T09:30:00.000Z"
+          },
+          "reason": {
+            "type": "string",
+            "example": "Personal leave"
+          },
+          "recurringRule": {
+            "type": "string",
+            "example": "FREQ=WEEKLY;COUNT=6"
+          }
+        }
+      },
+      "PatientDetailsDto": {
+        "type": "object",
+        "properties": {
+          "name": {
+            "type": "string",
+            "example": "Asha Kumar"
+          },
+          "phone": {
+            "type": "string",
+            "example": "+919876543210"
+          },
+          "email": {
+            "type": "object",
+            "example": "a@example.com",
+            "nullable": true
+          }
+        },
+        "required": [
+          "name",
+          "phone"
+        ]
+      },
+      "CreateAppointmentDto": {
+        "type": "object",
+        "properties": {
+          "serviceId": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "startsAt": {
+            "type": "string",
+            "example": "2026-03-05T04:30:00.000Z"
+          },
+          "patient": {
+            "$ref": "#/components/schemas/PatientDetailsDto"
+          },
+          "reasonForVisit": {
+            "type": "string",
+            "enum": [
+              "acute_injury",
+              "persistent_pain",
+              "post_surgical",
+              "chronic_condition",
+              "sports_performance",
+              "general_assessment"
+            ]
+          },
+          "couponCode": {
+            "type": "object",
+            "example": "WELCOME10",
+            "nullable": true
+          },
+          "paymentPreference": {
+            "type": "string",
+            "enum": [
+              "online",
+              "clinic"
+            ]
+          },
+          "consentGiven": {
+            "type": "boolean",
+            "example": true
+          },
+          "captchaToken": {
+            "type": "object",
+            "nullable": true
+          }
+        },
+        "required": [
+          "serviceId",
+          "startsAt",
+          "patient",
+          "reasonForVisit",
+          "paymentPreference",
+          "consentGiven"
+        ]
+      },
+      "AppointmentServiceDto": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "name": {
+            "type": "string"
+          },
+          "durationMinutes": {
+            "type": "number"
+          }
+        },
+        "required": [
+          "id",
+          "name",
+          "durationMinutes"
+        ]
+      },
+      "AppointmentPatientDto": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "name": {
+            "type": "string"
+          },
+          "phone": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "id",
+          "name",
+          "phone"
+        ]
+      },
+      "AppointmentPricingDto": {
+        "type": "object",
+        "properties": {
+          "originalPrice": {
+            "type": "string",
+            "example": "1000.00"
+          },
+          "discountAmount": {
+            "type": "string",
+            "example": "100.00"
+          },
+          "priceCharged": {
+            "type": "string",
+            "example": "900.00"
+          }
+        },
+        "required": [
+          "originalPrice",
+          "discountAmount",
+          "priceCharged"
+        ]
+      },
+      "AppointmentResponseDto": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "reference": {
+            "type": "string",
+            "example": "PH-2026-0001"
+          },
+          "startsAt": {
+            "type": "string",
+            "example": "2026-03-05T04:30:00.000Z"
+          },
+          "endsAt": {
+            "type": "string",
+            "example": "2026-03-05T05:15:00.000Z"
+          },
+          "status": {
+            "type": "string",
+            "example": "booked"
+          },
+          "service": {
+            "$ref": "#/components/schemas/AppointmentServiceDto"
+          },
+          "patient": {
+            "$ref": "#/components/schemas/AppointmentPatientDto"
+          },
+          "pricing": {
+            "$ref": "#/components/schemas/AppointmentPricingDto"
+          },
+          "paymentStatus": {
+            "type": "string",
+            "example": "pending"
+          }
+        },
+        "required": [
+          "id",
+          "reference",
+          "startsAt",
+          "endsAt",
+          "status",
+          "service",
+          "patient",
+          "pricing",
+          "paymentStatus"
+        ]
+      },
+      "ReschedulePatientDto": {
+        "type": "object",
+        "properties": {
+          "name": {
+            "type": "string",
+            "example": "Asha Kumar"
+          },
+          "phone": {
+            "type": "string",
+            "example": "+919876543210"
+          }
+        },
+        "required": [
+          "name",
+          "phone"
+        ]
+      },
+      "ReschedulePrefillDto": {
+        "type": "object",
+        "properties": {
+          "patient": {
+            "$ref": "#/components/schemas/ReschedulePatientDto"
+          },
+          "suggestedServiceId": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "previousAppointmentId": {
+            "type": "string",
+            "format": "uuid"
+          }
+        },
+        "required": [
+          "patient",
+          "suggestedServiceId",
+          "previousAppointmentId"
+        ]
+      },
+      "AdminAppointmentServiceDto": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "name": {
+            "type": "string"
+          },
+          "durationMinutes": {
+            "type": "number"
+          }
+        },
+        "required": [
+          "id",
+          "name",
+          "durationMinutes"
+        ]
+      },
+      "AdminAppointmentPatientDto": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "name": {
+            "type": "string"
+          },
+          "phone": {
+            "type": "string"
+          },
+          "email": {
+            "type": "object",
+            "nullable": true
+          }
+        },
+        "required": [
+          "id",
+          "name",
+          "phone",
+          "email"
+        ]
+      },
+      "AdminAppointmentListItemDto": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "reference": {
+            "type": "string",
+            "example": "PH-2026-0001"
+          },
+          "startsAt": {
+            "type": "string"
+          },
+          "endsAt": {
+            "type": "string"
+          },
+          "status": {
+            "type": "string"
+          },
+          "service": {
+            "$ref": "#/components/schemas/AdminAppointmentServiceDto"
+          },
+          "patient": {
+            "$ref": "#/components/schemas/AdminAppointmentPatientDto"
+          },
+          "priceCharged": {
+            "type": "string",
+            "example": "900.00"
+          },
+          "paymentStatus": {
+            "type": "string"
+          },
+          "bookingSource": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "id",
+          "reference",
+          "startsAt",
+          "endsAt",
+          "status",
+          "service",
+          "patient",
+          "priceCharged",
+          "paymentStatus",
+          "bookingSource"
+        ]
+      },
+      "PaginationMetaDto": {
+        "type": "object",
+        "properties": {
+          "page": {
+            "type": "number"
+          },
+          "limit": {
+            "type": "number"
+          },
+          "total": {
+            "type": "number"
+          },
+          "totalPages": {
+            "type": "number"
+          }
+        },
+        "required": [
+          "page",
+          "limit",
+          "total",
+          "totalPages"
+        ]
+      },
+      "PaginatedAdminAppointmentsDto": {
+        "type": "object",
+        "properties": {
+          "data": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/AdminAppointmentListItemDto"
+            }
+          },
+          "meta": {
+            "$ref": "#/components/schemas/PaginationMetaDto"
+          }
+        },
+        "required": [
+          "data",
+          "meta"
+        ]
+      },
+      "AdminAppointmentCancelledByDto": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "name": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "id",
+          "name"
+        ]
+      },
+      "AdminAppointmentDetailDto": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "reference": {
+            "type": "string",
+            "example": "PH-2026-0001"
+          },
+          "startsAt": {
+            "type": "string"
+          },
+          "endsAt": {
+            "type": "string"
+          },
+          "status": {
+            "type": "string"
+          },
+          "service": {
+            "$ref": "#/components/schemas/AdminAppointmentServiceDto"
+          },
+          "patient": {
+            "$ref": "#/components/schemas/AdminAppointmentPatientDto"
+          },
+          "priceCharged": {
+            "type": "string",
+            "example": "900.00"
+          },
+          "paymentStatus": {
+            "type": "string"
+          },
+          "bookingSource": {
+            "type": "string"
+          },
+          "originalPrice": {
+            "type": "string",
+            "example": "1000.00"
+          },
+          "discountAmount": {
+            "type": "string",
+            "example": "100.00"
+          },
+          "couponCode": {
+            "type": "object",
+            "nullable": true
+          },
+          "reasonForVisit": {
+            "type": "string"
+          },
+          "paymentPreference": {
+            "type": "string"
+          },
+          "cancellationReason": {
+            "type": "object",
+            "nullable": true
+          },
+          "cancelledBy": {
+            "nullable": true,
+            "type": "object",
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/AdminAppointmentCancelledByDto"
+              }
+            ]
+          },
+          "createdAt": {
+            "type": "string"
+          },
+          "updatedAt": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "id",
+          "reference",
+          "startsAt",
+          "endsAt",
+          "status",
+          "service",
+          "patient",
+          "priceCharged",
+          "paymentStatus",
+          "bookingSource",
+          "originalPrice",
+          "discountAmount",
+          "couponCode",
+          "reasonForVisit",
+          "paymentPreference",
+          "cancellationReason",
+          "cancelledBy",
+          "createdAt",
+          "updatedAt"
+        ]
+      },
+      "CreateAdminAppointmentDto": {
+        "type": "object",
+        "properties": {
+          "serviceId": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "startsAt": {
+            "type": "string",
+            "example": "2026-03-05T04:30:00.000Z"
+          },
+          "patient": {
+            "$ref": "#/components/schemas/PatientDetailsDto"
+          },
+          "reasonForVisit": {
+            "type": "string",
+            "enum": [
+              "acute_injury",
+              "persistent_pain",
+              "post_surgical",
+              "chronic_condition",
+              "sports_performance",
+              "general_assessment"
+            ]
+          },
+          "couponCode": {
+            "type": "object",
+            "example": "WELCOME10",
+            "nullable": true
+          },
+          "paymentPreference": {
+            "type": "string",
+            "enum": [
+              "online",
+              "clinic"
+            ]
+          },
+          "consentGiven": {
+            "type": "boolean",
+            "example": true
+          }
+        },
+        "required": [
+          "serviceId",
+          "startsAt",
+          "patient",
+          "reasonForVisit",
+          "paymentPreference",
+          "consentGiven"
+        ]
+      },
+      "UpdateAppointmentDto": {
+        "type": "object",
+        "properties": {
+          "startsAt": {
+            "type": "string",
+            "example": "2026-03-06T04:30:00.000Z"
+          },
+          "status": {
+            "type": "string",
+            "enum": [
+              "completed",
+              "no_show"
+            ]
+          }
+        }
+      },
+      "CancelAppointmentDto": {
+        "type": "object",
+        "properties": {
+          "reason": {
+            "type": "string",
+            "example": "Doctor unwell, rescheduling on request"
+          }
+        },
+        "required": [
+          "reason"
         ]
       }
     }

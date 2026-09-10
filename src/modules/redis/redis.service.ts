@@ -57,6 +57,29 @@ export class RedisService implements OnModuleDestroy {
     }
   }
 
+  /**
+   * Deletes every key matching `prefix*`, via `SCAN` rather than `KEYS` so a
+   * large keyspace never blocks the Redis event loop. Used to flush the whole
+   * availability-cache namespace on an availability-block write, which can
+   * affect any service on any date the block (or its recurrence) touches.
+   */
+  async deleteByPrefix(prefix: string): Promise<void> {
+    let cursor = '0';
+    do {
+      const [nextCursor, keys] = await this.client.scan(
+        cursor,
+        'MATCH',
+        `${prefix}*`,
+        'COUNT',
+        100,
+      );
+      cursor = nextCursor;
+      if (keys.length > 0) {
+        await this.client.del(...keys);
+      }
+    } while (cursor !== '0');
+  }
+
   async addToSet(
     key: string,
     member: string,

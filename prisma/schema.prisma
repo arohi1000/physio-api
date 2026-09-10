@@ -100,6 +100,34 @@ enum PaymentMethod {
   @@map("payment_method")
 }
 
+/// Not in the TRD §4.5 `appointments` table — added in M2 because
+/// M2-CONTRACT.md §2 fixes `reasonForVisit` as a required field of the
+/// `POST /appointments` payload. Persisted so the reason a patient booked is
+/// not silently discarded before the doctor ever sees it.
+enum AppointmentReasonForVisit {
+  acute_injury
+  persistent_pain
+  post_surgical
+  chronic_condition
+  sports_performance
+  general_assessment
+
+  @@map("appointment_reason_for_visit")
+}
+
+/// Not in the TRD §4.5 table — added in M2 for the same reason as
+/// `AppointmentReasonForVisit`: M2-CONTRACT.md §2 fixes `paymentPreference`
+/// as a required booking field. `payment_status` (already in the TRD) tracks
+/// what actually happened; this tracks what the patient asked for at booking
+/// time, which Milestone 5's payment flow needs to decide whether to prompt
+/// for an online payment or leave the visit to be settled at the clinic.
+enum PaymentPreference {
+  online
+  clinic
+
+  @@map("payment_preference")
+}
+
 /// Doctor and staff accounts for the CRM.
 /// `passwordHash` is null for Google-only users; `googleSub` is null until the
 /// first successful Google sign-in.
@@ -215,12 +243,20 @@ model ClinicSettings {
 /// (scheduled_at) WHERE status = 'booked', which the Prisma schema DSL cannot
 /// express. It is created by prisma/migrations/*_appointment_booked_slot_unique.
 model Appointment {
-  id                 String            @id @default(uuid()) @db.Uuid
+  id        String @id @default(uuid()) @db.Uuid
+  /// Human-facing booking reference (`PH-<year>-<seq>`), e.g. "PH-2026-0001".
+  /// Not in the TRD §4.5 table — added in M2 because M2-CONTRACT.md §2 fixes it
+  /// as part of the `POST /appointments` response shape the frontends build
+  /// against. Generated from `appointment_reference_seq` (see the migration)
+  /// so concurrent bookings for different slots never collide.
+  reference          String            @unique @db.VarChar(20)
   patientId          String            @map("patient_id") @db.Uuid
   serviceId          String            @map("service_id") @db.Uuid
   scheduledAt        DateTime          @map("scheduled_at") @db.Timestamptz(6)
   status             AppointmentStatus
   bookingSource      BookingSource     @map("booking_source")
+  reasonForVisit     AppointmentReasonForVisit @map("reason_for_visit")
+  paymentPreference  PaymentPreference @map("payment_preference")
   couponId           String?           @map("coupon_id") @db.Uuid
   priceCharged       Decimal           @map("price_charged") @db.Decimal(10, 2)
   paymentStatus      PaymentStatus     @default(pending) @map("payment_status")

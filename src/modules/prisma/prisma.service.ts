@@ -10,6 +10,28 @@ function applySoftDeleteFilter(client: PrismaClient) {
 export type FilteredPrismaClient = ReturnType<typeof applySoftDeleteFilter>;
 
 /**
+ * The type of the `tx` callback parameter for `FilteredPrismaClient.$transaction`.
+ *
+ * `Prisma.TransactionClient` (the unextended base type) looks like it should
+ * fit here, but does not: a `$extends`-wrapped client's interactive
+ * transaction callback carries the extension's generic marker in its type,
+ * which is not structurally assignable to the plain base type even though
+ * the soft-delete extension changes no method's runtime signature. Inferring
+ * the type directly from `FilteredPrismaClient` itself — rather than naming
+ * it — keeps every module that runs code inside a transaction (appointments,
+ * coupons, patients, availability) correctly typed against the client they
+ * actually receive.
+ */
+export type PrismaTransactionClient = FilteredPrismaClient extends {
+  $transaction(
+    fn: (client: infer Client) => unknown,
+    ...args: never[]
+  ): unknown;
+}
+  ? Client
+  : never;
+
+/**
  * Owns the Prisma connection and exposes two views of it.
  *
  * Composition rather than inheritance: a `PrismaService extends PrismaClient`

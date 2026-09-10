@@ -75,6 +75,21 @@ export class EnvironmentVariables {
   @IsBoolean()
   @Transform(({ value }) => value === true || value === 'true')
   readonly AUTH_DEV_BYPASS: boolean = false;
+
+  /**
+   * Signs reschedule links (`GET /appointments/reschedule/:token`). Kept
+   * separate from JWT_ACCESS_SECRET: these tokens are handed to unauthenticated
+   * patients over WhatsApp/SMS, a materially different exposure than a CRM
+   * bearer token, so the two must not share a signing key.
+   */
+  @IsString()
+  @MinLength(32)
+  readonly RESCHEDULE_TOKEN_SECRET: string;
+
+  /** Reschedule-link lifetime (seconds). Default 14 days. */
+  @IsInt()
+  @Min(60)
+  readonly RESCHEDULE_TOKEN_TTL_SECONDS: number = 1_209_600;
 }
 
 export function validateEnvironment(

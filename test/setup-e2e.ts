@@ -22,4 +22,7 @@ process.env.LOG_LEVEL = 'fatal';
 process.env.JWT_ACCESS_SECRET =
   process.env.JWT_ACCESS_SECRET ??
   'integration-test-signing-key-not-used-anywhere-else';
+process.env.RESCHEDULE_TOKEN_SECRET =
+  process.env.RESCHEDULE_TOKEN_SECRET ??
+  'integration-test-reschedule-signing-key-unused-elsewhere';
 process.env.AUTH_DEV_BYPASS = 'true';

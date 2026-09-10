@@ -14,6 +14,39 @@ jobs:
     name: Lint, typecheck, test, build
     runs-on: ubuntu-latest
 
+    # The booking-concurrency test is this project's one non-negotiable gate, and
+    # it needs a real database — a mocked one cannot exhibit a lock race. Without
+    # these services the e2e suite only ever ran on a developer's machine, so a
+    # regression in the advisory lock would have shipped with CI still green.
+    services:
+      postgres:
+        image: postgres:15
+        env:
+          POSTGRES_USER: physio
+          POSTGRES_PASSWORD: physio
+          POSTGRES_DB: physio
+        ports: ['5432:5432']
+        options: >-
+          --health-cmd "pg_isready -U physio"
+          --health-interval 5s
+          --health-timeout 5s
+          --health-retries 10
+      redis:
+        image: redis:7
+        ports: ['6379:6379']
+        options: >-
+          --health-cmd "redis-cli ping"
+          --health-interval 5s
+          --health-timeout 5s
+          --health-retries 10
+
+    env:
+      DATABASE_URL: postgresql://physio:physio@localhost:5432/physio?schema=public
+      REDIS_URL: redis://localhost:6379
+      JWT_ACCESS_SECRET: ci-test-key-never-signs-a-production-token
+      RESCHEDULE_TOKEN_SECRET: ci-test-key-never-signs-a-production-token
+      AUTH_DEV_BYPASS: 'true'
+
     steps:
       - uses: actions/checkout@v4
 
@@ -23,7 +56,6 @@ jobs:
           cache: npm
 
       # `npm ci` triggers the postinstall hook, which runs `prisma generate`.
-      # No database is required for that, so this job needs no services.
       - run: npm ci
 
       - run: npm run lint
@@ -32,23 +64,25 @@ jobs:
 
       - run: npm test
 
+      - name: Apply migrations and seed
+        run: |
+          npx prisma migrate deploy
+          npx prisma db seed
+
+      # The gate test lives here. `test:e2e` runs in band against the services
+      # above, so a broken booking lock fails the build rather than reaching main.
+      - name: Integration and e2e tests
+        run: npm run test:e2e
+
       - run: npm run build
 
       # openapi.json is the contract both frontends generate their types from,
       # so a stale committed spec silently desynchronises three repos.
+      # The committed contract is currently the dev-bypass contract: while
+      # decision B6 stands, /auth/dev-login is how the CRM signs in, so the CRM
+      # must be able to generate a type for it. AUTH_DEV_BYPASS flips to false in
+      # the same commit that deletes the bypass.
       - name: Check openapi.json is up to date
-        env:
-          # Generating the spec boots the Nest application, so it has to satisfy
-          # environment validation. Nothing here is contacted — no request is
-          # ever made — and the signing key is never used to mint a token.
-          DATABASE_URL: postgresql://physio:physio@localhost:5432/physio?schema=public
-          REDIS_URL: redis://localhost:6379
-          JWT_ACCESS_SECRET: ci-openapi-generation-key-never-signs-a-real-token
-          # The committed contract is the dev-bypass contract: while decision B6
-          # stands, /auth/dev-login is how the CRM signs in, so the CRM must be
-          # able to generate a type for it. Flip this to false in the same
-          # commit that deletes the bypass.
-          AUTH_DEV_BYPASS: 'true'
         run: |
           npm run generate:openapi
           git diff --exit-code openapi.json

@@ -10,6 +10,7 @@ import { InjectPinoLogger, PinoLogger } from 'nestjs-pino';
 
 interface ErrorResponseBody {
   readonly statusCode: number;
+  readonly code?: string;
   readonly error: string;
   readonly message: string | string[];
   readonly path: string;
@@ -77,13 +78,15 @@ export class AllExceptionsFilter implements ExceptionFilter {
       return { ...base, error: exception.name, message: payload };
     }
 
-    const { message, error } = payload as {
+    const { message, error, code } = payload as {
       message?: string | string[];
       error?: string;
+      code?: string;
     };
 
     return {
       ...base,
+      ...(code ? { code } : {}),
       error: error ?? exception.name,
       message: message ?? exception.message,
     };
