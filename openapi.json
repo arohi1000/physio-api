@@ -1952,12 +1952,17 @@
           "slotBufferMinutes": {
             "type": "number",
             "example": 0
+          },
+          "followUpReminderLeadDays": {
+            "type": "number",
+            "example": 2
           }
         },
         "required": [
           "timezone",
           "workingHours",
-          "slotBufferMinutes"
+          "slotBufferMinutes",
+          "followUpReminderLeadDays"
         ]
       },
       "UpdateClinicSettingsDto": {

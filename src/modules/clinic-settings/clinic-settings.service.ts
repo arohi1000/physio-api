@@ -69,11 +69,13 @@ function toDto(settings: {
   timezone: string;
   workingHours: Prisma.JsonValue;
   slotBufferMinutes: number;
+  followUpReminderLeadDays: number;
 }): ClinicSettingsDto {
   return {
     timezone: settings.timezone,
     workingHours:
       settings.workingHours as unknown as ClinicSettingsDto['workingHours'],
     slotBufferMinutes: settings.slotBufferMinutes,
+    followUpReminderLeadDays: settings.followUpReminderLeadDays,
   };
 }
