@@ -10,7 +10,7 @@ export class ServiceDto {
   @ApiProperty()
   readonly description: string;
 
-  @ApiProperty({ nullable: true, example: 'https://…' })
+  @ApiProperty({ type: String, nullable: true, example: 'https://…' })
   readonly demoVideoUrl: string | null;
 
   @ApiProperty({

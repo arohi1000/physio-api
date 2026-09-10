@@ -28,7 +28,7 @@ class AdminAppointmentPatientDto {
   @ApiProperty()
   readonly phone: string;
 
-  @ApiProperty({ nullable: true })
+  @ApiProperty({ type: String, nullable: true })
   readonly email: string | null;
 }
 
@@ -79,7 +79,7 @@ export class AdminAppointmentDetailDto extends AdminAppointmentListItemDto {
   @ApiProperty({ example: '100.00' })
   readonly discountAmount: string;
 
-  @ApiProperty({ nullable: true })
+  @ApiProperty({ type: String, nullable: true })
   readonly couponCode: string | null;
 
   @ApiProperty()
@@ -88,7 +88,7 @@ export class AdminAppointmentDetailDto extends AdminAppointmentListItemDto {
   @ApiProperty()
   readonly paymentPreference: PaymentPreference;
 
-  @ApiProperty({ nullable: true })
+  @ApiProperty({ type: String, nullable: true })
   readonly cancellationReason: string | null;
 
   @ApiProperty({ type: AdminAppointmentCancelledByDto, nullable: true })

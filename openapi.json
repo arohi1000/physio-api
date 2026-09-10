@@ -1165,7 +1165,7 @@
             "example": "patient"
           },
           "entityId": {
-            "type": "object",
+            "type": "string",
             "format": "uuid",
             "nullable": true
           },
@@ -1176,7 +1176,7 @@
             "additionalProperties": true
           },
           "ipAddress": {
-            "type": "object",
+            "type": "string",
             "nullable": true
           },
           "createdAt": {
@@ -1346,7 +1346,7 @@
             "type": "string"
           },
           "demoVideoUrl": {
-            "type": "object",
+            "type": "string",
             "nullable": true,
             "example": "https://…"
           },
@@ -1494,12 +1494,12 @@
             "example": "2026-03-05T09:30:00.000Z"
           },
           "reason": {
-            "type": "object",
+            "type": "string",
             "nullable": true,
             "example": "Personal leave"
           },
           "recurringRule": {
-            "type": "object",
+            "type": "string",
             "nullable": true,
             "example": "FREQ=WEEKLY;COUNT=6"
           }
@@ -1576,12 +1576,12 @@
             "example": "2026-03-05T09:30:00.000Z"
           },
           "reason": {
-            "type": "object",
+            "type": "string",
             "nullable": true,
             "example": "Personal leave"
           },
           "recurringRule": {
-            "type": "object",
+            "type": "string",
             "nullable": true,
             "example": "FREQ=WEEKLY;COUNT=6"
           },
@@ -1634,7 +1634,7 @@
             "example": "+919876543210"
           },
           "email": {
-            "type": "object",
+            "type": "string",
             "example": "a@example.com",
             "nullable": true
           }
@@ -1670,7 +1670,7 @@
             ]
           },
           "couponCode": {
-            "type": "object",
+            "type": "string",
             "example": "WELCOME10",
             "nullable": true
           },
@@ -1686,7 +1686,7 @@
             "example": true
           },
           "captchaToken": {
-            "type": "object",
+            "type": "string",
             "nullable": true
           }
         },
@@ -1882,7 +1882,7 @@
             "type": "string"
           },
           "email": {
-            "type": "object",
+            "type": "string",
             "nullable": true
           }
         },
@@ -2045,7 +2045,7 @@
             "example": "100.00"
           },
           "couponCode": {
-            "type": "object",
+            "type": "string",
             "nullable": true
           },
           "reasonForVisit": {
@@ -2055,7 +2055,7 @@
             "type": "string"
           },
           "cancellationReason": {
-            "type": "object",
+            "type": "string",
             "nullable": true
           },
           "cancelledBy": {
@@ -2122,7 +2122,7 @@
             ]
           },
           "couponCode": {
-            "type": "object",
+            "type": "string",
             "example": "WELCOME10",
             "nullable": true
           },

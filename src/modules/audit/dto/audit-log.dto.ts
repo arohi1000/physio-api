@@ -35,7 +35,7 @@ export class AuditLogEntryDto {
   @ApiProperty({ example: 'patient' })
   readonly entityType: string;
 
-  @ApiProperty({ format: 'uuid', nullable: true })
+  @ApiProperty({ format: 'uuid', type: String, nullable: true })
   readonly entityId: string | null;
 
   @ApiProperty({
@@ -46,7 +46,7 @@ export class AuditLogEntryDto {
   })
   readonly metadata: unknown;
 
-  @ApiProperty({ nullable: true })
+  @ApiProperty({ type: String, nullable: true })
   readonly ipAddress: string | null;
 
   @ApiProperty({ format: 'date-time' })

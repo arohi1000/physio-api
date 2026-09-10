@@ -10,10 +10,10 @@ export class AvailabilityBlockDto {
   @ApiProperty({ example: '2026-03-05T09:30:00.000Z' })
   readonly endsAt: string;
 
-  @ApiProperty({ nullable: true, example: 'Personal leave' })
+  @ApiProperty({ type: String, nullable: true, example: 'Personal leave' })
   readonly reason: string | null;
 
-  @ApiProperty({ nullable: true, example: 'FREQ=WEEKLY;COUNT=6' })
+  @ApiProperty({ type: String, nullable: true, example: 'FREQ=WEEKLY;COUNT=6' })
   readonly recurringRule: string | null;
 }
 

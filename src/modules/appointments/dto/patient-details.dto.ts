@@ -20,7 +20,11 @@ export class PatientDetailsDto {
   @MaxLength(32)
   readonly phone: string;
 
-  @ApiPropertyOptional({ example: 'a@example.com', nullable: true })
+  @ApiPropertyOptional({
+    example: 'a@example.com',
+    type: String,
+    nullable: true,
+  })
   @IsOptional()
   @IsEmail()
   readonly email?: string | null;

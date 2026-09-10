@@ -13,6 +13,9 @@ jobs:
   verify:
     name: Lint, typecheck, test, build
     runs-on: ubuntu-latest
+    # A misconfigured database URL makes the e2e suite hang on connect rather
+    # than fail, which otherwise burns the runner's full six-hour allowance.
+    timeout-minutes: 15
 
     # The booking-concurrency test is this project's one non-negotiable gate, and
     # it needs a real database — a mocked one cannot exhibit a lock race. Without
@@ -43,6 +46,11 @@ jobs:
     env:
       DATABASE_URL: postgresql://physio:physio@localhost:5432/physio?schema=public
       REDIS_URL: redis://localhost:6379
+      # `test/setup-e2e.ts` deliberately overrides DATABASE_URL/REDIS_URL so a
+      # local run can never touch development data. It reads these two names, so
+      # CI must set them or the suite dials the developer's ports and hangs.
+      TEST_DATABASE_URL: postgresql://physio:physio@localhost:5432/physio_test?schema=public
+      TEST_REDIS_URL: redis://localhost:6379/1
       JWT_ACCESS_SECRET: ci-test-key-never-signs-a-production-token
       RESCHEDULE_TOKEN_SECRET: ci-test-key-never-signs-a-production-token
       AUTH_DEV_BYPASS: 'true'
@@ -68,6 +76,17 @@ jobs:
         run: |
           npx prisma migrate deploy
           npx prisma db seed
+
+      # The e2e suite runs against its own database and Redis logical DB 1, so a
+      # failed-login lockout in a test cannot lock the seeded account out of the
+      # main one. It needs the same schema and fixtures.
+      - name: Prepare integration-test database
+        env:
+          PGPASSWORD: physio
+        run: |
+          psql -h localhost -U physio -d postgres -c 'CREATE DATABASE physio_test;'
+          DATABASE_URL="$TEST_DATABASE_URL" npx prisma migrate deploy
+          DATABASE_URL="$TEST_DATABASE_URL" npx prisma db seed
 
       # The gate test lives here. `test:e2e` runs in band against the services
       # above, so a broken booking lock fails the build rather than reaching main.

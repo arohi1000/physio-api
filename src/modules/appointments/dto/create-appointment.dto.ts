@@ -30,7 +30,7 @@ export class CreateAppointmentDto {
   @IsEnum(AppointmentReasonForVisit)
   readonly reasonForVisit: AppointmentReasonForVisit;
 
-  @ApiPropertyOptional({ example: 'WELCOME10', nullable: true })
+  @ApiPropertyOptional({ example: 'WELCOME10', type: String, nullable: true })
   @IsOptional()
   @IsString()
   readonly couponCode?: string | null;
@@ -49,7 +49,7 @@ export class CreateAppointmentDto {
   @IsBoolean()
   readonly consentGiven?: boolean;
 
-  @ApiPropertyOptional({ nullable: true })
+  @ApiPropertyOptional({ type: String, nullable: true })
   @IsOptional()
   @IsString()
   readonly captchaToken?: string | null;
