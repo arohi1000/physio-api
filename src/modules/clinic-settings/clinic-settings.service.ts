@@ -23,17 +23,20 @@ export class ClinicSettingsService {
     return toDto(settings);
   }
 
-  /** Internal accessor for other modules — the raw working-hours template. */
+  /** Internal accessor for other modules — the raw working-hours template
+   * plus the follow-up reminder lead time the follow-ups module needs. */
   async getWorkingHours(): Promise<{
     timezone: string;
     workingHours: WeeklyWorkingHours;
     slotBufferMinutes: number;
+    followUpReminderLeadDays: number;
   }> {
     const settings = await this.prisma.db.clinicSettings.findFirstOrThrow();
     return {
       timezone: settings.timezone,
       workingHours: settings.workingHours as unknown as WeeklyWorkingHours,
       slotBufferMinutes: settings.slotBufferMinutes,
+      followUpReminderLeadDays: settings.followUpReminderLeadDays,
     };
   }
 

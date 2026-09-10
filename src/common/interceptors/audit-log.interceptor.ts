@@ -15,13 +15,16 @@ import type { AuthenticatedRequest } from '../http/authenticated-request';
 
 /**
  * Path segment → entity type. TRD §7.5 requires an audit row for every
- * create/update/delete on these five tables.
+ * create/update/delete on these tables. `follow-ups` added in M3
+ * (M3-CONTRACT.md §7.2: "confirm follow-ups are included too") — the M1 set
+ * only covered the tables that existed when the interceptor was written.
  */
 const AUDITED_ENTITY_BY_SEGMENT: ReadonlyMap<string, string> = new Map([
   ['patients', 'patient'],
   ['appointments', 'appointment'],
   ['prescriptions', 'prescription'],
   ['receipts', 'receipt'],
+  ['follow-ups', 'follow_up'],
   ['users', 'user'],
 ]);
 
@@ -110,14 +113,23 @@ export class AuditLogInterceptor implements NestInterceptor {
   }
 }
 
+/**
+ * The *last* matching segment wins, not the first: M3 introduced nested
+ * routes like `/admin/patients/:id/follow-ups`, where `patients` matches
+ * before `follow-ups` does but the record actually being written is the
+ * follow-up, not the patient. Every route this API has still resolves the
+ * same way under this rule — a flat route like `/admin/patients/:id` has
+ * only one matching segment either way.
+ */
 function resolveEntityType(path: string): string | undefined {
+  let resolved: string | undefined;
   for (const segment of path.split('/')) {
     const entityType = AUDITED_ENTITY_BY_SEGMENT.get(segment);
     if (entityType) {
-      return entityType;
+      resolved = entityType;
     }
   }
-  return undefined;
+  return resolved;
 }
 
 /**

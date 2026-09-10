@@ -406,10 +406,18 @@ model Prescription {
 
 model Receipt {
   id             String        @id @default(uuid()) @db.Uuid
+  /// Human-quotable identifier (RCP-2026-0001) from `receipt_number_seq`. Not in
+  /// TRD §4.12: added in M3 because the PDF otherwise printed a raw UUID as the
+  /// receipt number on a document the patient takes away.
+  number         String        @unique @db.VarChar(32)
   patientId      String        @map("patient_id") @db.Uuid
   appointmentId  String?       @map("appointment_id") @db.Uuid
   amount         Decimal       @db.Decimal(10, 2)
   paymentMethod  PaymentMethod @map("payment_method")
+  /// Not in the TRD §4.5 table — added in M3 because M3-CONTRACT.md §4 fixes
+  /// `notes` as part of the `Receipt` shape (e.g. a note on a partial or
+  /// adjusted payment).
+  notes          String?
   pdfStorageKey  String?       @map("pdf_storage_key") @db.VarChar(1024)
   issuedByUserId String        @map("issued_by_user_id") @db.Uuid
   issuedAt       DateTime      @default(now()) @map("issued_at") @db.Timestamptz(6)

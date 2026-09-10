@@ -22,8 +22,12 @@ import { AuthModule } from './modules/auth/auth.module';
 import { AvailabilityModule } from './modules/availability/availability.module';
 import { ClinicSettingsModule } from './modules/clinic-settings/clinic-settings.module';
 import { CouponsModule } from './modules/coupons/coupons.module';
+import { FilesModule } from './modules/files/files.module';
+import { FollowUpsModule } from './modules/follow-ups/follow-ups.module';
 import { HealthModule } from './modules/health/health.module';
 import { PatientsModule } from './modules/patients/patients.module';
+import { PrescriptionsModule } from './modules/prescriptions/prescriptions.module';
+import { ReceiptsModule } from './modules/receipts/receipts.module';
 import { ServicesModule } from './modules/services/services.module';
 
 @Module({
@@ -52,6 +56,10 @@ import { ServicesModule } from './modules/services/services.module';
     CouponsModule,
     AvailabilityModule,
     AppointmentsModule,
+    FilesModule,
+    FollowUpsModule,
+    PrescriptionsModule,
+    ReceiptsModule,
   ],
   providers: [
     {

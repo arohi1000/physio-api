@@ -90,6 +90,34 @@ export class EnvironmentVariables {
   @IsInt()
   @Min(60)
   readonly RESCHEDULE_TOKEN_TTL_SECONDS: number = 1_209_600;
+
+  /**
+   * Directory the local-disk `FileStorageProvider` writes PDFs under
+   * (M3-CONTRACT.md §2.2). Relative paths resolve against the process cwd.
+   * Gitignored — never committed, and a fresh clone/CI creates it on first use.
+   */
+  @IsString()
+  @IsNotEmpty()
+  readonly FILE_STORAGE_DIR: string = './storage/files';
+
+  /**
+   * Signs the download URLs `LocalDiskFileStorageProvider.getSignedUrl` issues,
+   * so a URL cannot be forged or have its expiry extended. Separate from every
+   * other signing key for the same reason RESCHEDULE_TOKEN_SECRET is separate:
+   * a different exposure (these links are followed directly by a browser, no
+   * bearer token attached).
+   */
+  @IsString()
+  @MinLength(32)
+  readonly FILE_STORAGE_SIGNING_SECRET: string;
+
+  /**
+   * Base URL used to build the absolute signed URLs `GET .../pdf` returns.
+   * Must be the URL a client can actually reach this API on.
+   */
+  @IsString()
+  @IsNotEmpty()
+  readonly PUBLIC_API_BASE_URL: string = 'http://localhost:4000';
 }
 
 export function validateEnvironment(

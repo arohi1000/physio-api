@@ -379,6 +379,221 @@
         ]
       }
     },
+    "/api/v1/admin/patients": {
+      "get": {
+        "operationId": "PatientsController_search",
+        "parameters": [
+          {
+            "name": "search",
+            "required": false,
+            "in": "query",
+            "description": "Matches patient name, phone or email",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "page",
+            "required": false,
+            "in": "query",
+            "schema": {
+              "default": 1,
+              "type": "number"
+            }
+          },
+          {
+            "name": "limit",
+            "required": false,
+            "in": "query",
+            "schema": {
+              "default": 20,
+              "type": "number"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PaginatedPatientsDto"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Search patients by name, phone or email",
+        "tags": [
+          "admin/patients"
+        ]
+      },
+      "post": {
+        "operationId": "PatientsController_create",
+        "parameters": [],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CreatePatientDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PatientDetailDto"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "PATIENT_PHONE_TAKEN"
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Manual / walk-in add",
+        "tags": [
+          "admin/patients"
+        ]
+      }
+    },
+    "/api/v1/admin/patients/{id}": {
+      "get": {
+        "operationId": "PatientsController_getById",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PatientDetailDto"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "PATIENT_NOT_FOUND"
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Full patient history aggregate",
+        "tags": [
+          "admin/patients"
+        ]
+      },
+      "patch": {
+        "operationId": "PatientsController_update",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/UpdatePatientDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PatientDetailDto"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "PATIENT_NOT_FOUND"
+          },
+          "409": {
+            "description": "PATIENT_PHONE_TAKEN"
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Update a patient",
+        "tags": [
+          "admin/patients"
+        ]
+      },
+      "delete": {
+        "operationId": "PatientsController_delete",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "204": {
+            "description": ""
+          },
+          "403": {
+            "description": ""
+          },
+          "404": {
+            "description": "PATIENT_NOT_FOUND"
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Soft delete a patient (doctor_admin only)",
+        "tags": [
+          "admin/patients"
+        ]
+      }
+    },
     "/api/v1/coupons/validate": {
       "post": {
         "description": "Read-only — never increments used_count.",
@@ -952,6 +1167,436 @@
           "admin/appointments"
         ]
       }
+    },
+    "/api/v1/admin/patients/{patientId}/follow-ups": {
+      "post": {
+        "operationId": "FollowUpsController_create",
+        "parameters": [
+          {
+            "name": "patientId",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CreateFollowUpDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/FollowUpResponseDto"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "PATIENT_NOT_FOUND"
+          },
+          "422": {
+            "description": "FOLLOW_UP_DATE_IN_PAST"
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Log a follow-up for a patient",
+        "tags": [
+          "admin/follow-ups"
+        ]
+      }
+    },
+    "/api/v1/admin/follow-ups": {
+      "get": {
+        "operationId": "FollowUpsController_list",
+        "parameters": [
+          {
+            "name": "status",
+            "required": false,
+            "in": "query",
+            "schema": {
+              "type": "string",
+              "enum": [
+                "scheduled",
+                "reminder_sent",
+                "rebooked",
+                "dismissed"
+              ]
+            }
+          },
+          {
+            "name": "dueBefore",
+            "required": false,
+            "in": "query",
+            "schema": {
+              "example": "2026-10-31",
+              "type": "string"
+            }
+          },
+          {
+            "name": "page",
+            "required": false,
+            "in": "query",
+            "schema": {
+              "default": 1,
+              "type": "number"
+            }
+          },
+          {
+            "name": "limit",
+            "required": false,
+            "in": "query",
+            "schema": {
+              "default": 20,
+              "type": "number"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PaginatedFollowUpsDto"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "The follow-up queue",
+        "tags": [
+          "admin/follow-ups"
+        ]
+      }
+    },
+    "/api/v1/admin/follow-ups/{id}": {
+      "patch": {
+        "operationId": "FollowUpsController_update",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/UpdateFollowUpDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/FollowUpResponseDto"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "FOLLOW_UP_NOT_FOUND"
+          },
+          "422": {
+            "description": "FOLLOW_UP_DATE_IN_PAST"
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Update a follow-up: status, target date, purpose",
+        "tags": [
+          "admin/follow-ups"
+        ]
+      }
+    },
+    "/api/v1/admin/patients/{patientId}/prescriptions": {
+      "post": {
+        "operationId": "PrescriptionsController_create",
+        "parameters": [
+          {
+            "name": "patientId",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CreatePrescriptionDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PrescriptionDetailDto"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "PATIENT_NOT_FOUND"
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Issue a prescription for a patient",
+        "tags": [
+          "admin/prescriptions"
+        ]
+      }
+    },
+    "/api/v1/admin/prescriptions/{id}": {
+      "get": {
+        "operationId": "PrescriptionsController_getById",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PrescriptionDetailDto"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "DOCUMENT_NOT_FOUND"
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Prescription detail",
+        "tags": [
+          "admin/prescriptions"
+        ]
+      }
+    },
+    "/api/v1/admin/prescriptions/{id}/pdf": {
+      "get": {
+        "operationId": "PrescriptionsController_getPdfUrl",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SignedFileUrlResponseDto"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "DOCUMENT_NOT_FOUND"
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Short-lived signed URL for the prescription PDF",
+        "tags": [
+          "admin/prescriptions"
+        ]
+      }
+    },
+    "/api/v1/admin/patients/{patientId}/receipts": {
+      "post": {
+        "operationId": "ReceiptsController_create",
+        "parameters": [
+          {
+            "name": "patientId",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CreateReceiptDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ReceiptDetailDto"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "PATIENT_NOT_FOUND"
+          },
+          "422": {
+            "description": "RECEIPT_AMOUNT_INVALID"
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Issue a receipt for a patient",
+        "tags": [
+          "admin/receipts"
+        ]
+      }
+    },
+    "/api/v1/admin/receipts/{id}": {
+      "get": {
+        "operationId": "ReceiptsController_getById",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ReceiptDetailDto"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "DOCUMENT_NOT_FOUND"
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Receipt detail",
+        "tags": [
+          "admin/receipts"
+        ]
+      }
+    },
+    "/api/v1/admin/receipts/{id}/pdf": {
+      "get": {
+        "operationId": "ReceiptsController_getPdfUrl",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SignedFileUrlResponseDto"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "DOCUMENT_NOT_FOUND"
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Short-lived signed URL for the receipt PDF",
+        "tags": [
+          "admin/receipts"
+        ]
+      }
     }
   },
   "info": {
@@ -1368,6 +2013,373 @@
           "price",
           "durationMinutes"
         ]
+      },
+      "PatientListItemDto": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "name": {
+            "type": "string"
+          },
+          "phone": {
+            "type": "string"
+          },
+          "email": {
+            "type": "string",
+            "nullable": true
+          },
+          "lastVisitAt": {
+            "type": "string",
+            "nullable": true
+          },
+          "nextAppointmentAt": {
+            "type": "string",
+            "nullable": true
+          },
+          "followUpDueAt": {
+            "type": "string",
+            "nullable": true
+          }
+        },
+        "required": [
+          "id",
+          "name",
+          "phone",
+          "email",
+          "lastVisitAt",
+          "nextAppointmentAt",
+          "followUpDueAt"
+        ]
+      },
+      "PaginationMetaDto": {
+        "type": "object",
+        "properties": {
+          "page": {
+            "type": "number"
+          },
+          "limit": {
+            "type": "number"
+          },
+          "total": {
+            "type": "number"
+          },
+          "totalPages": {
+            "type": "number"
+          }
+        },
+        "required": [
+          "page",
+          "limit",
+          "total",
+          "totalPages"
+        ]
+      },
+      "PaginatedPatientsDto": {
+        "type": "object",
+        "properties": {
+          "data": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/PatientListItemDto"
+            }
+          },
+          "meta": {
+            "$ref": "#/components/schemas/PaginationMetaDto"
+          }
+        },
+        "required": [
+          "data",
+          "meta"
+        ]
+      },
+      "CreatePatientDto": {
+        "type": "object",
+        "properties": {
+          "name": {
+            "type": "string"
+          },
+          "phone": {
+            "type": "string"
+          },
+          "email": {
+            "type": "string",
+            "nullable": true
+          },
+          "dob": {
+            "type": "string",
+            "example": "1988-04-12",
+            "nullable": true
+          },
+          "gender": {
+            "type": "string",
+            "enum": [
+              "female",
+              "male",
+              "other"
+            ],
+            "nullable": true
+          },
+          "notes": {
+            "type": "string",
+            "nullable": true
+          },
+          "consentGiven": {
+            "type": "boolean"
+          }
+        },
+        "required": [
+          "name",
+          "phone"
+        ]
+      },
+      "TimelineAppointmentItemDto": {
+        "type": "object",
+        "properties": {
+          "kind": {
+            "type": "string",
+            "enum": [
+              "appointment"
+            ]
+          },
+          "id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "at": {
+            "type": "string"
+          },
+          "status": {
+            "type": "string"
+          },
+          "serviceName": {
+            "type": "string"
+          },
+          "reference": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "kind",
+          "id",
+          "at",
+          "status",
+          "serviceName",
+          "reference"
+        ]
+      },
+      "TimelineFollowUpItemDto": {
+        "type": "object",
+        "properties": {
+          "kind": {
+            "type": "string",
+            "enum": [
+              "follow_up"
+            ]
+          },
+          "id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "at": {
+            "type": "string"
+          },
+          "status": {
+            "type": "string"
+          },
+          "purpose": {
+            "type": "string"
+          },
+          "revisitTargetDate": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "kind",
+          "id",
+          "at",
+          "status",
+          "purpose",
+          "revisitTargetDate"
+        ]
+      },
+      "TimelinePrescriptionItemDto": {
+        "type": "object",
+        "properties": {
+          "kind": {
+            "type": "string",
+            "enum": [
+              "prescription"
+            ]
+          },
+          "id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "at": {
+            "type": "string"
+          },
+          "summary": {
+            "type": "string",
+            "example": "3 medicines, 2 exercises"
+          }
+        },
+        "required": [
+          "kind",
+          "id",
+          "at",
+          "summary"
+        ]
+      },
+      "TimelineReceiptItemDto": {
+        "type": "object",
+        "properties": {
+          "kind": {
+            "type": "string",
+            "enum": [
+              "receipt"
+            ]
+          },
+          "id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "number": {
+            "type": "string",
+            "example": "RCP-2026-0001"
+          },
+          "at": {
+            "type": "string"
+          },
+          "amount": {
+            "type": "string",
+            "example": "1000.00"
+          },
+          "paymentMethod": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "kind",
+          "id",
+          "number",
+          "at",
+          "amount",
+          "paymentMethod"
+        ]
+      },
+      "PatientDetailDto": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "name": {
+            "type": "string"
+          },
+          "phone": {
+            "type": "string"
+          },
+          "email": {
+            "type": "string",
+            "nullable": true
+          },
+          "dob": {
+            "type": "string",
+            "nullable": true,
+            "example": "1988-04-12"
+          },
+          "gender": {
+            "type": "string",
+            "nullable": true
+          },
+          "source": {
+            "type": "string"
+          },
+          "notes": {
+            "type": "string",
+            "nullable": true
+          },
+          "consentGivenAt": {
+            "type": "string",
+            "nullable": true
+          },
+          "createdAt": {
+            "type": "string"
+          },
+          "timeline": {
+            "type": "array",
+            "items": {
+              "oneOf": [
+                {
+                  "$ref": "#/components/schemas/TimelineAppointmentItemDto"
+                },
+                {
+                  "$ref": "#/components/schemas/TimelineFollowUpItemDto"
+                },
+                {
+                  "$ref": "#/components/schemas/TimelinePrescriptionItemDto"
+                },
+                {
+                  "$ref": "#/components/schemas/TimelineReceiptItemDto"
+                }
+              ]
+            },
+            "description": "Newest-first. Do not re-sort or re-merge on the client."
+          }
+        },
+        "required": [
+          "id",
+          "name",
+          "phone",
+          "email",
+          "dob",
+          "gender",
+          "source",
+          "notes",
+          "consentGivenAt",
+          "createdAt",
+          "timeline"
+        ]
+      },
+      "UpdatePatientDto": {
+        "type": "object",
+        "properties": {
+          "name": {
+            "type": "string"
+          },
+          "phone": {
+            "type": "string"
+          },
+          "email": {
+            "type": "string",
+            "nullable": true
+          },
+          "dob": {
+            "type": "string",
+            "example": "1988-04-12",
+            "nullable": true
+          },
+          "gender": {
+            "type": "string",
+            "enum": [
+              "female",
+              "male",
+              "other"
+            ],
+            "nullable": true
+          },
+          "notes": {
+            "type": "string",
+            "nullable": true
+          },
+          "consentGiven": {
+            "type": "boolean"
+          }
+        }
       },
       "ValidateCouponDto": {
         "type": "object",
@@ -1943,29 +2955,6 @@
           "bookingSource"
         ]
       },
-      "PaginationMetaDto": {
-        "type": "object",
-        "properties": {
-          "page": {
-            "type": "number"
-          },
-          "limit": {
-            "type": "number"
-          },
-          "total": {
-            "type": "number"
-          },
-          "totalPages": {
-            "type": "number"
-          }
-        },
-        "required": [
-          "page",
-          "limit",
-          "total",
-          "totalPages"
-        ]
-      },
       "PaginatedAdminAppointmentsDto": {
         "type": "object",
         "properties": {
@@ -2173,6 +3162,344 @@
         },
         "required": [
           "reason"
+        ]
+      },
+      "CreateFollowUpDto": {
+        "type": "object",
+        "properties": {
+          "purpose": {
+            "type": "string",
+            "example": "Review shoulder mobility"
+          },
+          "revisitTargetDate": {
+            "type": "string",
+            "example": "2026-10-02"
+          },
+          "appointmentId": {
+            "type": "string",
+            "nullable": true,
+            "format": "uuid"
+          }
+        },
+        "required": [
+          "purpose",
+          "revisitTargetDate"
+        ]
+      },
+      "FollowUpResponseDto": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "patientId": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "appointmentId": {
+            "type": "string",
+            "nullable": true,
+            "format": "uuid"
+          },
+          "purpose": {
+            "type": "string"
+          },
+          "revisitTargetDate": {
+            "type": "string",
+            "example": "2026-10-02"
+          },
+          "reminderScheduledFor": {
+            "type": "string"
+          },
+          "status": {
+            "type": "string",
+            "enum": [
+              "scheduled",
+              "reminder_sent",
+              "rebooked",
+              "dismissed"
+            ]
+          },
+          "createdAt": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "id",
+          "patientId",
+          "appointmentId",
+          "purpose",
+          "revisitTargetDate",
+          "reminderScheduledFor",
+          "status",
+          "createdAt"
+        ]
+      },
+      "PaginatedFollowUpsDto": {
+        "type": "object",
+        "properties": {
+          "data": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/FollowUpResponseDto"
+            }
+          },
+          "meta": {
+            "$ref": "#/components/schemas/PaginationMetaDto"
+          }
+        },
+        "required": [
+          "data",
+          "meta"
+        ]
+      },
+      "UpdateFollowUpDto": {
+        "type": "object",
+        "properties": {
+          "status": {
+            "type": "string",
+            "enum": [
+              "scheduled",
+              "reminder_sent",
+              "rebooked",
+              "dismissed"
+            ]
+          },
+          "revisitTargetDate": {
+            "type": "string",
+            "example": "2026-10-16"
+          },
+          "purpose": {
+            "type": "string"
+          }
+        }
+      },
+      "PrescriptionMedicineDto": {
+        "type": "object",
+        "properties": {
+          "name": {
+            "type": "string",
+            "example": "Ibuprofen"
+          },
+          "dose": {
+            "type": "string",
+            "example": "400mg"
+          },
+          "frequency": {
+            "type": "string",
+            "example": "twice daily"
+          },
+          "durationDays": {
+            "type": "number",
+            "example": 5
+          }
+        },
+        "required": [
+          "name",
+          "dose",
+          "frequency",
+          "durationDays"
+        ]
+      },
+      "PrescriptionExerciseDto": {
+        "type": "object",
+        "properties": {
+          "name": {
+            "type": "string",
+            "example": "Scapular retraction"
+          },
+          "sets": {
+            "type": "number",
+            "example": 3
+          },
+          "reps": {
+            "type": "number",
+            "example": 12
+          },
+          "notes": {
+            "type": "string",
+            "nullable": true
+          }
+        },
+        "required": [
+          "name",
+          "sets",
+          "reps"
+        ]
+      },
+      "CreatePrescriptionDto": {
+        "type": "object",
+        "properties": {
+          "medicines": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/PrescriptionMedicineDto"
+            }
+          },
+          "exercises": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/PrescriptionExerciseDto"
+            }
+          },
+          "instructions": {
+            "type": "string",
+            "example": "Ice for 10 minutes after each session."
+          },
+          "appointmentId": {
+            "type": "string",
+            "nullable": true,
+            "format": "uuid"
+          }
+        },
+        "required": [
+          "medicines",
+          "exercises",
+          "instructions"
+        ]
+      },
+      "PrescriptionDetailDto": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "patientId": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "appointmentId": {
+            "type": "string",
+            "nullable": true,
+            "format": "uuid"
+          },
+          "medicines": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/PrescriptionMedicineDto"
+            }
+          },
+          "exercises": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/PrescriptionExerciseDto"
+            }
+          },
+          "instructions": {
+            "type": "string"
+          },
+          "issuedAt": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "id",
+          "patientId",
+          "appointmentId",
+          "medicines",
+          "exercises",
+          "instructions",
+          "issuedAt"
+        ]
+      },
+      "SignedFileUrlResponseDto": {
+        "type": "object",
+        "properties": {
+          "url": {
+            "type": "string"
+          },
+          "expiresAt": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "url",
+          "expiresAt"
+        ]
+      },
+      "CreateReceiptDto": {
+        "type": "object",
+        "properties": {
+          "amount": {
+            "type": "string",
+            "example": "1000.00"
+          },
+          "paymentMethod": {
+            "type": "string",
+            "enum": [
+              "cash",
+              "online",
+              "card",
+              "other"
+            ]
+          },
+          "appointmentId": {
+            "type": "string",
+            "nullable": true,
+            "format": "uuid"
+          },
+          "notes": {
+            "type": "string",
+            "nullable": true
+          }
+        },
+        "required": [
+          "paymentMethod"
+        ]
+      },
+      "ReceiptDetailDto": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "number": {
+            "type": "string",
+            "example": "RCP-2026-0001",
+            "description": "Quotable receipt number."
+          },
+          "patientId": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "appointmentId": {
+            "type": "string",
+            "nullable": true,
+            "format": "uuid"
+          },
+          "amount": {
+            "type": "string",
+            "example": "1000.00"
+          },
+          "paymentMethod": {
+            "type": "string",
+            "enum": [
+              "cash",
+              "online",
+              "card",
+              "other"
+            ]
+          },
+          "notes": {
+            "type": "string",
+            "nullable": true
+          },
+          "issuedAt": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "id",
+          "number",
+          "patientId",
+          "appointmentId",
+          "amount",
+          "paymentMethod",
+          "notes",
+          "issuedAt"
         ]
       }
     }

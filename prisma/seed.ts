@@ -1,6 +1,11 @@
 import {
+  AppointmentStatus,
+  BookingSource,
   CouponValueType,
   MessageType,
+  PaymentMethod,
+  PaymentPreference,
+  PatientSource,
   PrismaClient,
   UserRole,
   type Prisma,
@@ -8,10 +13,23 @@ import {
 import * as argon2 from 'argon2';
 import { config } from 'dotenv';
 import type { WeeklyWorkingHours } from '../src/modules/clinic-settings/clinic-settings.types';
+import { zonedWallClockToUtc } from '../src/modules/availability/timezone.util';
 
 config({ quiet: true });
 
 const prisma = new PrismaClient();
+
+/**
+ * Mirrors `ReceiptsService.nextReceiptNumber`. Every caller here is guarded by
+ * an existence check, so re-running the seed does not consume sequence values.
+ */
+async function nextReceiptNumber(): Promise<string> {
+  const rows = await prisma.$queryRaw<
+    { nextval: bigint }[]
+  >`SELECT nextval('receipt_number_seq') AS nextval`;
+  const sequence = rows[0].nextval.toString().padStart(4, '0');
+  return `RCP-${new Date().getUTCFullYear()}-${sequence}`;
+}
 
 /**
  * Local development defaults. The CRM demo signs in as either of these through
@@ -403,6 +421,204 @@ async function seedBlogPosts(authorUserId: string): Promise<void> {
   }
 }
 
+const ONE_DAY_AGO_MS = 24 * 60 * 60 * 1000;
+
+async function findOrCreatePatient(input: {
+  name: string;
+  phone: string;
+}): Promise<string> {
+  const existing = await prisma.patient.findFirst({
+    where: { phone: input.phone },
+  });
+  if (existing) {
+    return existing.id;
+  }
+  const created = await prisma.patient.create({
+    data: {
+      name: input.name,
+      phone: input.phone,
+      source: PatientSource.manual,
+    },
+  });
+  return created.id;
+}
+
+async function upsertSeedAppointment(input: {
+  reference: string;
+  patientId: string;
+  serviceId: string;
+  scheduledAt: Date;
+  priceCharged: Prisma.Decimal | string;
+}): Promise<string> {
+  const appointment = await prisma.appointment.upsert({
+    where: { reference: input.reference },
+    update: {},
+    create: {
+      reference: input.reference,
+      patientId: input.patientId,
+      serviceId: input.serviceId,
+      scheduledAt: input.scheduledAt,
+      status: AppointmentStatus.completed,
+      bookingSource: BookingSource.manual,
+      reasonForVisit: 'general_assessment',
+      paymentPreference: PaymentPreference.clinic,
+      priceCharged: input.priceCharged,
+      paymentStatus: 'paid_offline',
+    },
+  });
+  return appointment.id;
+}
+
+/**
+ * Two patients with real history, so the CRM has a populated timeline to
+ * build against (M3-CONTRACT.md §6). Idempotent: appointments upsert on
+ * their unique `reference`; prescriptions/receipts/follow-ups are skipped if
+ * a row already exists for the same appointment/patient.
+ */
+async function seedPatientHistoryFixtures(doctorId: string): Promise<void> {
+  const [assessment, manualTherapy, dryNeedling] = await Promise.all([
+    prisma.service.findFirstOrThrow({
+      where: { name: 'Initial Physiotherapy Assessment' },
+    }),
+    prisma.service.findFirstOrThrow({
+      where: { name: 'Manual Therapy Session' },
+    }),
+    prisma.service.findFirstOrThrow({ where: { name: 'Dry Needling' } }),
+  ]);
+  const clinicSettings = await prisma.clinicSettings.findFirstOrThrow();
+  const timezone = clinicSettings.timezone;
+  const leadDays = clinicSettings.followUpReminderLeadDays;
+
+  const ashaId = await findOrCreatePatient({
+    name: 'Asha Kumar',
+    phone: '+919876500010',
+  });
+  const ashaAppt1Id = await upsertSeedAppointment({
+    reference: 'PH-SEED-ASHA-0001',
+    patientId: ashaId,
+    serviceId: assessment.id,
+    scheduledAt: new Date(Date.now() - 60 * ONE_DAY_AGO_MS),
+    priceCharged: assessment.price,
+  });
+  const ashaAppt2Id = await upsertSeedAppointment({
+    reference: 'PH-SEED-ASHA-0002',
+    patientId: ashaId,
+    serviceId: manualTherapy.id,
+    scheduledAt: new Date(Date.now() - 30 * ONE_DAY_AGO_MS),
+    priceCharged: manualTherapy.price,
+  });
+
+  const existingPrescription = await prisma.prescription.findFirst({
+    where: { appointmentId: ashaAppt2Id },
+  });
+  if (!existingPrescription) {
+    await prisma.prescription.create({
+      data: {
+        patientId: ashaId,
+        appointmentId: ashaAppt2Id,
+        issuedByUserId: doctorId,
+        content: {
+          medicines: [
+            {
+              name: 'Ibuprofen',
+              dose: '400mg',
+              frequency: 'twice daily',
+              durationDays: 5,
+            },
+          ],
+          exercises: [
+            { name: 'Scapular retraction', sets: 3, reps: 12, notes: null },
+            {
+              name: 'Pendulum swings',
+              sets: 2,
+              reps: 15,
+              notes: 'Slow and controlled',
+            },
+          ],
+          instructions: 'Ice for 10 minutes after each session.',
+        } satisfies Prisma.InputJsonValue,
+      },
+    });
+  }
+
+  for (const [appointmentId, amount] of [
+    [ashaAppt1Id, assessment.price],
+    [ashaAppt2Id, manualTherapy.price],
+  ] as const) {
+    const existingReceipt = await prisma.receipt.findFirst({
+      where: { appointmentId },
+    });
+    if (!existingReceipt) {
+      await prisma.receipt.create({
+        data: {
+          number: await nextReceiptNumber(),
+          patientId: ashaId,
+          appointmentId,
+          amount,
+          paymentMethod: PaymentMethod.cash,
+          issuedByUserId: doctorId,
+        },
+      });
+    }
+  }
+
+  const existingFollowUp = await prisma.followUp.findFirst({
+    where: { patientId: ashaId, purpose: 'Review shoulder mobility' },
+  });
+  if (!existingFollowUp) {
+    const revisitDate = new Date(Date.now() + 14 * ONE_DAY_AGO_MS)
+      .toISOString()
+      .slice(0, 10);
+    const [year, month, day] = revisitDate.split('-').map(Number);
+    const reminderDate = new Date(Date.UTC(year, month - 1, day));
+    reminderDate.setUTCDate(reminderDate.getUTCDate() - leadDays);
+    const reminderDateStr = reminderDate.toISOString().slice(0, 10);
+
+    await prisma.followUp.create({
+      data: {
+        patientId: ashaId,
+        appointmentId: ashaAppt2Id,
+        purpose: 'Review shoulder mobility',
+        revisitTargetDate: new Date(revisitDate),
+        reminderScheduledFor: zonedWallClockToUtc(
+          reminderDateStr,
+          '09:00',
+          timezone,
+        ),
+        status: 'scheduled',
+        createdByUserId: doctorId,
+      },
+    });
+  }
+
+  const raviId = await findOrCreatePatient({
+    name: 'Ravi Menon',
+    phone: '+919876500011',
+  });
+  const raviApptId = await upsertSeedAppointment({
+    reference: 'PH-SEED-RAVI-0001',
+    patientId: raviId,
+    serviceId: dryNeedling.id,
+    scheduledAt: new Date(Date.now() - 20 * ONE_DAY_AGO_MS),
+    priceCharged: dryNeedling.price,
+  });
+  const existingRaviReceipt = await prisma.receipt.findFirst({
+    where: { appointmentId: raviApptId },
+  });
+  if (!existingRaviReceipt) {
+    await prisma.receipt.create({
+      data: {
+        number: await nextReceiptNumber(),
+        patientId: raviId,
+        appointmentId: raviApptId,
+        amount: dryNeedling.price,
+        paymentMethod: PaymentMethod.online,
+        issuedByUserId: doctorId,
+      },
+    });
+  }
+}
+
 /**
  * Idempotent by design: every record is matched on a natural key and updated
  * rather than inserted, so running the seed twice leaves the same row count.
@@ -415,6 +631,7 @@ async function main(): Promise<void> {
   await seedMessageTemplates();
   await seedReviews();
   await seedBlogPosts(doctorId);
+  await seedPatientHistoryFixtures(doctorId);
 
   const counts = {
     users: await prisma.user.count(),
@@ -424,6 +641,7 @@ async function main(): Promise<void> {
     messageTemplates: await prisma.messageTemplate.count(),
     reviews: await prisma.review.count(),
     blogPosts: await prisma.blogPost.count(),
+    patients: await prisma.patient.count(),
   };
 
   process.stdout.write(`Seed complete: ${JSON.stringify(counts)}\n`);

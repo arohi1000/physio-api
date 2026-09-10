@@ -115,3 +115,57 @@ export class AppointmentNotCancellableException extends AppException {
     );
   }
 }
+
+/**
+ * M3-CONTRACT.md §3: also the code a soft-deleted patient's read/update/
+ * document-creation path returns — soft-deleted rows are indistinguishable
+ * from missing ones to every caller outside the erasure path.
+ */
+export class PatientNotFoundException extends AppException {
+  constructor() {
+    super(HttpStatus.NOT_FOUND, 'PATIENT_NOT_FOUND', 'Patient not found.');
+  }
+}
+
+export class PatientPhoneTakenException extends AppException {
+  constructor() {
+    super(
+      HttpStatus.CONFLICT,
+      'PATIENT_PHONE_TAKEN',
+      'Another patient already holds that phone number.',
+    );
+  }
+}
+
+export class FollowUpNotFoundException extends AppException {
+  constructor() {
+    super(HttpStatus.NOT_FOUND, 'FOLLOW_UP_NOT_FOUND', 'Follow-up not found.');
+  }
+}
+
+export class FollowUpDateInPastException extends AppException {
+  constructor() {
+    super(
+      HttpStatus.UNPROCESSABLE_ENTITY,
+      'FOLLOW_UP_DATE_IN_PAST',
+      'The revisit target date cannot be before today.',
+    );
+  }
+}
+
+/** Covers both prescriptions and receipts, per M3-CONTRACT.md §3. */
+export class DocumentNotFoundException extends AppException {
+  constructor(message = 'Document not found.') {
+    super(HttpStatus.NOT_FOUND, 'DOCUMENT_NOT_FOUND', message);
+  }
+}
+
+export class ReceiptAmountInvalidException extends AppException {
+  constructor() {
+    super(
+      HttpStatus.UNPROCESSABLE_ENTITY,
+      'RECEIPT_AMOUNT_INVALID',
+      'Receipt amount must be a positive value.',
+    );
+  }
+}

@@ -25,4 +25,11 @@ process.env.JWT_ACCESS_SECRET =
 process.env.RESCHEDULE_TOKEN_SECRET =
   process.env.RESCHEDULE_TOKEN_SECRET ??
   'integration-test-reschedule-signing-key-unused-elsewhere';
+process.env.FILE_STORAGE_SIGNING_SECRET =
+  process.env.FILE_STORAGE_SIGNING_SECRET ??
+  'integration-test-file-storage-signing-key-unused-elsewhere';
+// Isolated from dev's ./storage/files so a test run's PDFs never mix with
+// (or delete) files a developer is looking at locally.
+process.env.FILE_STORAGE_DIR =
+  process.env.FILE_STORAGE_DIR ?? './storage/files-test';
 process.env.AUTH_DEV_BYPASS = 'true';

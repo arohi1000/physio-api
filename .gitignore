@@ -8,6 +8,10 @@ dist
 # Test output
 coverage
 
+# Local-disk file storage (M3-CONTRACT.md §2.2) — no object storage exists yet;
+# generated PDFs land here in dev/CI and must never be committed.
+/storage/
+
 # Environment — never commit real secrets, only .env.example
 .env
 .env.*
