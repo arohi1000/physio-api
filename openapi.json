@@ -1564,6 +1564,387 @@
           "admin/receipts"
         ]
       }
+    },
+    "/api/v1/blog": {
+      "get": {
+        "operationId": "BlogController_list",
+        "parameters": [
+          {
+            "name": "page",
+            "required": false,
+            "in": "query",
+            "schema": {
+              "default": 1,
+              "type": "number"
+            }
+          },
+          {
+            "name": "limit",
+            "required": false,
+            "in": "query",
+            "schema": {
+              "maximum": 100,
+              "default": 20,
+              "type": "number"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PaginatedBlogPostsDto"
+                }
+              }
+            }
+          }
+        },
+        "summary": "Published posts, newest first",
+        "tags": [
+          "blog"
+        ]
+      }
+    },
+    "/api/v1/blog/{slug}": {
+      "get": {
+        "operationId": "BlogController_getBySlug",
+        "parameters": [
+          {
+            "name": "slug",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/BlogPostDto"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "BLOG_POST_NOT_FOUND"
+          }
+        },
+        "summary": "A published post by slug — a draft 404s",
+        "tags": [
+          "blog"
+        ]
+      }
+    },
+    "/api/v1/admin/blog": {
+      "get": {
+        "operationId": "AdminBlogController_list",
+        "parameters": [
+          {
+            "name": "status",
+            "required": false,
+            "in": "query",
+            "schema": {
+              "default": "all",
+              "type": "string",
+              "enum": [
+                "all",
+                "published",
+                "draft"
+              ]
+            }
+          },
+          {
+            "name": "page",
+            "required": false,
+            "in": "query",
+            "schema": {
+              "default": 1,
+              "type": "number"
+            }
+          },
+          {
+            "name": "limit",
+            "required": false,
+            "in": "query",
+            "schema": {
+              "maximum": 100,
+              "default": 20,
+              "type": "number"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PaginatedBlogPostsDto"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "List posts, drafts included, filterable by status",
+        "tags": [
+          "admin/blog"
+        ]
+      },
+      "post": {
+        "operationId": "AdminBlogController_create",
+        "parameters": [],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CreateBlogPostDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/BlogPostDto"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "BLOG_SLUG_TAKEN"
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Create a post; slug is generated from the title",
+        "tags": [
+          "admin/blog"
+        ]
+      }
+    },
+    "/api/v1/admin/blog/{id}": {
+      "get": {
+        "operationId": "AdminBlogController_getById",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/BlogPostDto"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "BLOG_POST_NOT_FOUND"
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "A post by id, drafts included",
+        "tags": [
+          "admin/blog"
+        ]
+      },
+      "patch": {
+        "operationId": "AdminBlogController_update",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/UpdateBlogPostDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/BlogPostDto"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "BLOG_POST_NOT_FOUND"
+          },
+          "409": {
+            "description": "BLOG_SLUG_TAKEN"
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Update a post",
+        "tags": [
+          "admin/blog"
+        ]
+      },
+      "delete": {
+        "operationId": "AdminBlogController_delete",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "204": {
+            "description": ""
+          },
+          "404": {
+            "description": "BLOG_POST_NOT_FOUND"
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Hard delete — a blog post is not a medical record",
+        "tags": [
+          "admin/blog"
+        ]
+      }
+    },
+    "/api/v1/site-content/{key}": {
+      "get": {
+        "operationId": "SiteContentController_get",
+        "parameters": [
+          {
+            "name": "key",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "oneOf": [
+                    {
+                      "$ref": "#/components/schemas/AboutContentDto"
+                    },
+                    {
+                      "$ref": "#/components/schemas/ReviewsContentDto"
+                    }
+                  ]
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "SITE_CONTENT_KEY_UNKNOWN"
+          }
+        },
+        "summary": "Editable content by key: about | reviews",
+        "tags": [
+          "site-content"
+        ]
+      }
+    },
+    "/api/v1/admin/site-content/{key}": {
+      "put": {
+        "operationId": "AdminSiteContentController_update",
+        "parameters": [
+          {
+            "name": "key",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "oneOf": [
+                    {
+                      "$ref": "#/components/schemas/AboutContentDto"
+                    },
+                    {
+                      "$ref": "#/components/schemas/ReviewsContentDto"
+                    }
+                  ]
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "SITE_CONTENT_KEY_UNKNOWN"
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Replace the content for a key: about | reviews",
+        "tags": [
+          "admin/site-content"
+        ]
+      }
     }
   },
   "info": {
@@ -3415,6 +3796,204 @@
           "paymentMethod",
           "notes",
           "issuedAt"
+        ]
+      },
+      "BlogAuthorDto": {
+        "type": "object",
+        "properties": {
+          "name": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "name"
+        ]
+      },
+      "BlogPostDto": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "title": {
+            "type": "string"
+          },
+          "slug": {
+            "type": "string"
+          },
+          "content": {
+            "type": "string",
+            "description": "Markdown, sanitised on render by the website"
+          },
+          "coverImageUrl": {
+            "type": "string",
+            "nullable": true
+          },
+          "published": {
+            "type": "boolean"
+          },
+          "publishedAt": {
+            "type": "string",
+            "nullable": true
+          },
+          "author": {
+            "$ref": "#/components/schemas/BlogAuthorDto"
+          },
+          "createdAt": {
+            "type": "string"
+          },
+          "updatedAt": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "id",
+          "title",
+          "slug",
+          "content",
+          "coverImageUrl",
+          "published",
+          "publishedAt",
+          "author",
+          "createdAt",
+          "updatedAt"
+        ]
+      },
+      "PaginatedBlogPostsDto": {
+        "type": "object",
+        "properties": {
+          "data": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/BlogPostDto"
+            }
+          },
+          "meta": {
+            "$ref": "#/components/schemas/PaginationMetaDto"
+          }
+        },
+        "required": [
+          "data",
+          "meta"
+        ]
+      },
+      "CreateBlogPostDto": {
+        "type": "object",
+        "properties": {
+          "title": {
+            "type": "string",
+            "maxLength": 255
+          },
+          "content": {
+            "type": "string",
+            "description": "Markdown"
+          },
+          "coverImageUrl": {
+            "type": "string",
+            "nullable": true
+          },
+          "published": {
+            "type": "boolean",
+            "default": false
+          }
+        },
+        "required": [
+          "title",
+          "content"
+        ]
+      },
+      "UpdateBlogPostDto": {
+        "type": "object",
+        "properties": {
+          "title": {
+            "type": "string",
+            "maxLength": 255
+          },
+          "slug": {
+            "type": "string"
+          },
+          "content": {
+            "type": "string",
+            "description": "Markdown"
+          },
+          "coverImageUrl": {
+            "type": "string",
+            "nullable": true
+          },
+          "published": {
+            "type": "boolean"
+          }
+        }
+      },
+      "AboutContentDto": {
+        "type": "object",
+        "properties": {
+          "headline": {
+            "type": "string"
+          },
+          "bioParagraphs": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          },
+          "credentials": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          },
+          "photoUrl": {
+            "type": "string",
+            "nullable": true
+          },
+          "clinicAddress": {
+            "type": "string",
+            "nullable": true
+          }
+        },
+        "required": [
+          "headline",
+          "bioParagraphs",
+          "credentials",
+          "photoUrl",
+          "clinicAddress"
+        ]
+      },
+      "ReviewItemDto": {
+        "type": "object",
+        "properties": {
+          "name": {
+            "type": "string"
+          },
+          "rating": {
+            "type": "number",
+            "minimum": 1,
+            "maximum": 5
+          },
+          "comment": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "name",
+          "rating",
+          "comment"
+        ]
+      },
+      "ReviewsContentDto": {
+        "type": "object",
+        "properties": {
+          "items": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/ReviewItemDto"
+            }
+          }
+        },
+        "required": [
+          "items"
         ]
       }
     }

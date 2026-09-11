@@ -452,6 +452,21 @@ model BlogPost {
   @@map("blog_posts")
 }
 
+/**
+ * M5-CONTRACT.md §2 — key-value store for editable site content. Key-value
+ * rather than a columned table: it also holds the deferred reviews module's
+ * static replacement (`reviews`), so a third content block later needs no
+ * migration. Additive only — no existing table changed.
+ */
+model SiteContent {
+  key             String   @id @db.VarChar(64) // 'about' | 'reviews'
+  value           Json
+  updatedByUserId String?  @map("updated_by_user_id") @db.Uuid
+  updatedAt       DateTime @updatedAt @map("updated_at") @db.Timestamptz(6)
+
+  @@map("site_content")
+}
+
 model AuditLog {
   id         String   @id @default(uuid()) @db.Uuid
   userId     String   @map("user_id") @db.Uuid

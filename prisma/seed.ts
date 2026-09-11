@@ -421,6 +421,53 @@ async function seedBlogPosts(authorUserId: string): Promise<void> {
   }
 }
 
+/**
+ * M5-CONTRACT.md §5: `about` and `reviews` seeded with copy clearly marked as
+ * placeholder — the doctor's bio and real testimonials are client content
+ * (EXECUTION-PLAN.md §8) and must not be invented. Upserted by key so
+ * re-running the seed never duplicates or clobbers a doctor-entered edit's
+ * row count, though it does reset the copy — same idempotency trade-off the
+ * other seed functions here make.
+ */
+async function seedSiteContent(): Promise<void> {
+  await prisma.siteContent.upsert({
+    where: { key: 'about' },
+    update: {},
+    create: {
+      key: 'about',
+      value: {
+        headline: "[PLACEHOLDER — pending doctor's own words]",
+        bioParagraphs: [
+          "[PLACEHOLDER: the doctor's bio has not been provided yet. " +
+            'Replace this paragraph with her own words before launch.]',
+        ],
+        credentials: ['[PLACEHOLDER — e.g. BPT, MPT (Sports)]'],
+        photoUrl: null,
+        clinicAddress: null,
+      } satisfies Prisma.InputJsonValue,
+    },
+  });
+
+  await prisma.siteContent.upsert({
+    where: { key: 'reviews' },
+    update: {},
+    create: {
+      key: 'reviews',
+      value: {
+        items: [
+          {
+            name: '[PLACEHOLDER PATIENT NAME]',
+            rating: 5,
+            comment:
+              '[PLACEHOLDER TESTIMONIAL — replace with a real, consented ' +
+              'patient review before launch.]',
+          },
+        ],
+      } satisfies Prisma.InputJsonValue,
+    },
+  });
+}
+
 const ONE_DAY_AGO_MS = 24 * 60 * 60 * 1000;
 
 async function findOrCreatePatient(input: {
@@ -631,6 +678,7 @@ async function main(): Promise<void> {
   await seedMessageTemplates();
   await seedReviews();
   await seedBlogPosts(doctorId);
+  await seedSiteContent();
   await seedPatientHistoryFixtures(doctorId);
 
   const counts = {
@@ -641,6 +689,7 @@ async function main(): Promise<void> {
     messageTemplates: await prisma.messageTemplate.count(),
     reviews: await prisma.review.count(),
     blogPosts: await prisma.blogPost.count(),
+    siteContent: await prisma.siteContent.count(),
     patients: await prisma.patient.count(),
   };
 

@@ -169,3 +169,34 @@ export class ReceiptAmountInvalidException extends AppException {
     );
   }
 }
+
+/**
+ * M5-CONTRACT.md §3: also the code a public request for an unpublished
+ * (draft) post returns — a draft must be indistinguishable from a missing
+ * post to any caller outside the admin API.
+ */
+export class BlogPostNotFoundException extends AppException {
+  constructor() {
+    super(HttpStatus.NOT_FOUND, 'BLOG_POST_NOT_FOUND', 'Blog post not found.');
+  }
+}
+
+export class BlogSlugTakenException extends AppException {
+  constructor() {
+    super(
+      HttpStatus.CONFLICT,
+      'BLOG_SLUG_TAKEN',
+      'Another post already holds that slug.',
+    );
+  }
+}
+
+export class SiteContentKeyUnknownException extends AppException {
+  constructor() {
+    super(
+      HttpStatus.NOT_FOUND,
+      'SITE_CONTENT_KEY_UNKNOWN',
+      'No editable content exists for that key.',
+    );
+  }
+}
