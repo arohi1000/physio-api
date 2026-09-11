@@ -6,10 +6,12 @@ import {
   HttpStatus,
   Param,
   Post,
+  UseGuards,
 } from '@nestjs/common';
 import { ApiOperation, ApiResponse, ApiTags } from '@nestjs/swagger';
 import { Throttle } from '@nestjs/throttler';
 import { Public } from '../../common/decorators/public.decorator';
+import { Phase2FeatureGuard } from '../../common/guards/phase2-feature.guard';
 import { AppointmentsService } from './appointments.service';
 import { AppointmentResponseDto } from './dto/appointment-response.dto';
 import { CreateAppointmentDto } from './dto/create-appointment.dto';
@@ -45,7 +47,11 @@ export class AppointmentsController {
     return this.appointmentsService.bookGuest(dto);
   }
 
+  // Deferred to Phase 2 with cancellation rebooking (PRD.md §6). Unlike the
+  // fully deferred features this route shares a controller with guest booking,
+  // so it is gated rather than unregistered.
   @Public()
+  @UseGuards(Phase2FeatureGuard('rescheduleLink'))
   @Get('reschedule/:token')
   @Throttle(RESCHEDULE_LOOKUP_THROTTLE)
   @ApiOperation({

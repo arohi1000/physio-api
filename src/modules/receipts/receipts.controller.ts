@@ -5,6 +5,7 @@ import {
   Param,
   ParseUUIDPipe,
   Post,
+  UseGuards,
 } from '@nestjs/common';
 import {
   ApiBearerAuth,
@@ -12,6 +13,7 @@ import {
   ApiResponse,
   ApiTags,
 } from '@nestjs/swagger';
+import { Phase2FeatureGuard } from '../../common/guards/phase2-feature.guard';
 import type { AuditRecorder } from '../../common/audit/audit-recorder';
 import { Audit } from '../../common/decorators/audit-action.decorator';
 import { CurrentUser } from '../../common/decorators/current-user.decorator';
@@ -27,6 +29,8 @@ import { ReceiptsService } from './receipts.service';
 export class ReceiptsController {
   constructor(private readonly receiptsService: ReceiptsService) {}
 
+  // Creation is deferred to Phase 2; reading an already-issued document is not.
+  @UseGuards(Phase2FeatureGuard('receipts'))
   @Post('patients/:patientId/receipts')
   @ApiOperation({ summary: 'Issue a receipt for a patient' })
   @ApiResponse({ status: 201, type: ReceiptDetailDto })

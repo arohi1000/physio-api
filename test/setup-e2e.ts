@@ -33,3 +33,12 @@ process.env.FILE_STORAGE_SIGNING_SECRET =
 process.env.FILE_STORAGE_DIR =
   process.env.FILE_STORAGE_DIR ?? './storage/files-test';
 process.env.AUTH_DEV_BYPASS = 'true';
+
+// Phase 2 features are disconnected in normal runs but their tests still run
+// here (TRD.md §9). Those tests are what make reconnection safe — a deferred
+// feature whose suite stopped running would quietly rot until someone tried to
+// sell it as an add-on.
+process.env.FEATURE_COUPONS = 'true';
+process.env.FEATURE_PRESCRIPTIONS = 'true';
+process.env.FEATURE_RECEIPTS = 'true';
+process.env.FEATURE_RESCHEDULE_LINK = 'true';

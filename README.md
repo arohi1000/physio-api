@@ -4,9 +4,21 @@ Backend for the physiotherapy clinic website and admin CRM. NestJS + TypeScript
 + Prisma + PostgreSQL + Redis. This service owns all data and business logic;
 both frontends are pure consumers of the OpenAPI contract in `openapi.json`.
 
-**Current state: Milestone 0 (foundations).** There are no domain models,
-authentication or business endpoints yet — only `GET /api/v1/health` and the
-tooling everything else will be built on.
+**Current state: Milestone 3 complete.** The full schema, authentication, RBAC,
+audit logging, the booking core (availability, concurrency-safe reservation),
+patients, follow-ups and document generation are all built and tested.
+
+**Phase 1 scope was trimmed on 2026-09-12** — see `../Clinic_Demo/PRD.md` and
+`../Clinic_Demo/TRD.md`. Coupons, prescriptions, receipts and cancellation
+messaging are now Phase 2. **That code stays in this repo**: it is disconnected
+at the route level behind a feature flag, never deleted, so reconnecting it is
+configuration rather than a rebuild. Its tests keep running — they are what make
+reconnection safe. See `../Clinic_Demo/TRD.md` §9 for the policy.
+
+**Still to build for Phase 1:** the WhatsApp follow-up reminder (queue, worker,
+provider, webhook), message templates, and the blog/about content endpoints.
+The reminder is the core value feature and none of it exists yet — a follow-up
+records *when* a reminder would send and nothing sends it.
 
 ---
 

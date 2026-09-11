@@ -192,6 +192,35 @@ describe('POST /appointments — booking transaction (e2e)', () => {
     await prisma.coupon.delete({ where: { code } });
   });
 
+  it('rejects a coupon code while coupons are deferred, even though booking still accepts the field', async () => {
+    // Un-registering `/coupons/validate` does not disconnect coupons: booking
+    // takes a code directly, and the seeded codes are in a public repository.
+    // Without the guard this booking would quietly take 10% off.
+    const startsAt = slotStartsAt(date, '16:45');
+    const previous = process.env.FEATURE_COUPONS;
+    delete process.env.FEATURE_COUPONS;
+
+    try {
+      const response = await request(app.getHttpServer())
+        .post('/api/v1/appointments')
+        .send(bookingPayload({ serviceId, startsAt, couponCode: 'WELCOME10' }))
+        .expect(404);
+
+      expect(response.body.code).toBe('COUPON_NOT_FOUND');
+
+      const rows = await prisma.appointment.findMany({
+        where: { scheduledAt: new Date(startsAt) },
+      });
+      expect(rows).toHaveLength(0);
+    } finally {
+      if (previous === undefined) {
+        delete process.env.FEATURE_COUPONS;
+      } else {
+        process.env.FEATURE_COUPONS = previous;
+      }
+    }
+  });
+
   it('frees the slot when the appointment is cancelled, so it can be booked again', async () => {
     const startsAt = slotStartsAt(date, '11:15');
     createdAppointmentSlots.push(new Date(startsAt));

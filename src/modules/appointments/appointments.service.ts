@@ -8,9 +8,11 @@ import {
 import {
   AppointmentNotCancellableException,
   ConsentRequiredException,
+  CouponNotFoundException,
   SlotOutsideAvailabilityException,
   SlotUnavailableException,
 } from '../../common/exceptions/app.exception';
+import { isPhase2FeatureEnabled } from '../../config/phase2-features';
 import { AvailabilityCacheService } from '../availability/availability-cache.service';
 import { AvailabilityService } from '../availability/availability.service';
 import { localDateOfInstant } from '../availability/timezone.util';
@@ -207,6 +209,16 @@ export class AppointmentsService {
   ): Promise<AppointmentResponseDto> {
     if (dto.consentGiven !== true) {
       throw new ConsentRequiredException();
+    }
+
+    // Coupons are deferred to Phase 2 (PRD.md §6). Un-registering
+    // `/coupons/validate` does not close this path: booking accepts a code
+    // directly, and the seeded codes live in a public repository — so without
+    // this, anyone could still claim a discount. Rejected as unknown, which is
+    // what it is from the caller's side, rather than silently ignored: a patient
+    // who believes a discount applied should not discover otherwise at the desk.
+    if (dto.couponCode && !isPhase2FeatureEnabled('coupons')) {
+      throw new CouponNotFoundException();
     }
 
     const service = await this.servicesService.findActiveByIdOrThrow(

@@ -594,39 +594,6 @@
         ]
       }
     },
-    "/api/v1/coupons/validate": {
-      "post": {
-        "description": "Read-only — never increments used_count.",
-        "operationId": "CouponsController_validate",
-        "parameters": [],
-        "requestBody": {
-          "required": true,
-          "content": {
-            "application/json": {
-              "schema": {
-                "$ref": "#/components/schemas/ValidateCouponDto"
-              }
-            }
-          }
-        },
-        "responses": {
-          "200": {
-            "description": "",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/CouponPreviewResponseDto"
-                }
-              }
-            }
-          }
-        },
-        "summary": "Preview a coupon against a service price",
-        "tags": [
-          "coupons"
-        ]
-      }
-    },
     "/api/v1/availability": {
       "get": {
         "description": "An empty `slots` array is a valid, non-error response (fully booked or a closed day). Redis-cached ~60s.",
@@ -2385,63 +2352,6 @@
             "type": "boolean"
           }
         }
-      },
-      "ValidateCouponDto": {
-        "type": "object",
-        "properties": {
-          "code": {
-            "type": "string",
-            "example": "WELCOME10"
-          },
-          "serviceId": {
-            "type": "string",
-            "format": "uuid"
-          }
-        },
-        "required": [
-          "code",
-          "serviceId"
-        ]
-      },
-      "CouponPreviewResponseDto": {
-        "type": "object",
-        "properties": {
-          "code": {
-            "type": "string",
-            "example": "WELCOME10"
-          },
-          "valueType": {
-            "type": "string",
-            "enum": [
-              "percent",
-              "fixed"
-            ]
-          },
-          "value": {
-            "type": "string",
-            "example": "10.00"
-          },
-          "originalPrice": {
-            "type": "string",
-            "example": "1000.00"
-          },
-          "discountAmount": {
-            "type": "string",
-            "example": "100.00"
-          },
-          "finalPrice": {
-            "type": "string",
-            "example": "900.00"
-          }
-        },
-        "required": [
-          "code",
-          "valueType",
-          "value",
-          "originalPrice",
-          "discountAmount",
-          "finalPrice"
-        ]
       },
       "SlotDto": {
         "type": "object",
